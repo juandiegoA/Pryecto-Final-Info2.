@@ -1,6 +1,14 @@
+<<<<<<< HEAD
 /build/
 /cmake-build-*/
 /.vs/
 /.vscode/
 *.user
 
+=======
+.qtcreator/
+*.pro.user
+build/
+*.exe
+*.o
+>>>>>>> c579f18150e6e87268b61370a325439f9b677e72
