@@ -2,3 +2,6 @@
 
 Nivel::~Nivel() = default;
 
+void Nivel::actualizar(std::chrono::milliseconds) {
+    actualizar();
+}

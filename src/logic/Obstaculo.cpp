@@ -2,3 +2,4 @@
 
 Obstaculo::~Obstaculo() = default;
 
+void Obstaculo::actualizar(float) noexcept {}
