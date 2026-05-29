@@ -37,15 +37,15 @@ void NivelRutaTransmision::actualizar(std::chrono::milliseconds intervalo) {
         return;
     }
 
-    Checkpoint* objetivo = objetivoActual();
-    if (objetivo != nullptr && verificarLlegada(*objetivo, toleranciaCheckpoint_)) {
-        alcanzarObjetivo(*objetivo);
-        return;
-    }
-
     if (temporizadorCheckpoint_.duracion().count() > 0
         && temporizadorCheckpoint_.estaAgotado()) {
         reiniciarDesdeUltimoCheckpoint();
+        return;
+    }
+
+    Checkpoint* objetivo = objetivoActual();
+    if (objetivo != nullptr && verificarLlegada(*objetivo, toleranciaCheckpoint_)) {
+        alcanzarObjetivo(*objetivo);
     }
 }
 
