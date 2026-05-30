@@ -10,7 +10,7 @@ bool BarreraEstatica::estaActivo() const noexcept {
 }
 
 bool BarreraEstatica::bloqueaAl(const Disco& disco) const noexcept {
-    return disco.colisionaCon(posicion_, tolerancia_);
+    return disco.cruzaPor(posicion_, tolerancia_);
 }
 
 const Posicion& BarreraEstatica::posicion() const noexcept {

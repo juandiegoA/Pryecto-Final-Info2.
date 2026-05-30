@@ -119,11 +119,15 @@ void Juego::configurarNivelRutaTransmision() {
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-1",
         Posicion{4.0F, 0.0F},
-        5000ms));
+        4200ms));
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-2",
         Posicion{8.0F, 2.0F},
-        6000ms));
+        5000ms));
+    checkpoints_.push_back(std::make_unique<Checkpoint>(
+        "checkpoint-3",
+        Posicion{11.0F, -1.0F},
+        5200ms));
 
     for (const auto& checkpoint : checkpoints_) {
         nivel->agregarCheckpoint(*checkpoint);
@@ -131,27 +135,38 @@ void Juego::configurarNivelRutaTransmision() {
 
     metaFinal_ = std::make_unique<NodoCentralEnergia>(
         "nodo-central",
-        Posicion{12.0F, 0.0F},
-        7000ms);
+        Posicion{14.0F, 0.0F},
+        5500ms);
     nivel->establecerMetaFinal(*metaFinal_);
 
     obstaculos_.push_back(std::make_unique<BarreraEstatica>(
         Posicion{6.0F, -1.5F},
         0.5F));
     obstaculos_.push_back(std::make_unique<BarreraTemporizada>(
-        Posicion{10.0F, 1.0F},
-        0.5F,
-        1500ms,
-        1500ms));
+        Posicion{6.5F, 1.0F},
+        0.45F,
+        1100ms,
+        900ms));
+    obstaculos_.push_back(std::make_unique<BarreraTemporizada>(
+        Posicion{9.5F, 0.4F},
+        0.45F,
+        900ms,
+        1200ms));
 
     for (const auto& obstaculo : obstaculos_) {
         nivel->agregarObstaculo(*obstaculo);
     }
 
-    drones_.push_back(std::make_unique<Dron>(Posicion{5.0F, 3.0F}, 1.5F));
+    drones_.push_back(std::make_unique<Dron>(Posicion{5.0F, 2.8F}, 1.8F));
     drones_.back()->definirRutaVigilancia({
-        Posicion{5.0F, 3.0F},
-        Posicion{9.0F, 3.0F}
+        Posicion{5.0F, 2.8F},
+        Posicion{8.0F, 1.4F},
+        Posicion{10.5F, -0.4F}
+    });
+    drones_.push_back(std::make_unique<Dron>(Posicion{12.0F, 1.4F}, 1.2F));
+    drones_.back()->definirRutaVigilancia({
+        Posicion{12.0F, 1.4F},
+        Posicion{12.5F, -1.2F}
     });
 
     for (const auto& dron : drones_) {

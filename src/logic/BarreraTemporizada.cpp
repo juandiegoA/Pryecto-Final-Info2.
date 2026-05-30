@@ -36,7 +36,7 @@ void BarreraTemporizada::actualizar(float segundos) noexcept {
 }
 
 bool BarreraTemporizada::bloqueaAl(const Disco& disco) const noexcept {
-    return estaActivo() && disco.colisionaCon(posicion_, tolerancia_);
+    return estaActivo() && disco.cruzaPor(posicion_, tolerancia_);
 }
 
 const Posicion& BarreraTemporizada::posicion() const noexcept {

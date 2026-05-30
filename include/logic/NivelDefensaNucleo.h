@@ -29,6 +29,8 @@ public:
     bool verificarImpactoJugador() const noexcept;
 
     const std::vector<DiscoEnemigo*>& obtenerDiscosEnemigos() const noexcept;
+    std::chrono::milliseconds tiempoTranscurrido() const noexcept;
+    std::chrono::milliseconds tiempoRestante() const noexcept;
     bool estaEnCurso() const noexcept;
     bool estaFinalizado() const override;
     bool victoria() const override;

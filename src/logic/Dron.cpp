@@ -85,7 +85,7 @@ void Dron::actualizar(float segundos) noexcept {
 }
 
 bool Dron::bloqueaDisco(const Disco& disco, float tolerancia) const noexcept {
-    return activo_ && disco.colisionaCon(posicion_, tolerancia);
+    return activo_ && disco.cruzaPor(posicion_, tolerancia);
 }
 
 void Dron::moverHaciaObjetivo(float segundos) noexcept {

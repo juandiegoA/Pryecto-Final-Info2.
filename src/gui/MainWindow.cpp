@@ -2,8 +2,10 @@
 
 #include "logic/BarreraEstatica.h"
 #include "logic/BarreraTemporizada.h"
+#include "logic/NivelDefensaNucleo.h"
 #include "logic/NivelRutaTransmision.h"
 
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
@@ -11,6 +13,7 @@
 #include <QTimer>
 
 #include <chrono>
+#include <limits>
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("Ultimate en TRON");
@@ -31,9 +34,28 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     temporizador_->start();
 }
 
+void MainWindow::keyPressEvent(QKeyEvent* event) {
+    if (event->key() == Qt::Key_1) {
+        juego_.cambiarANivelRutaTransmision();
+        tieneObjetivo_ = false;
+        update();
+    } else if (event->key() == Qt::Key_2) {
+        juego_.cambiarANivelDefensaNucleo();
+        tieneObjetivo_ = false;
+        update();
+    } else {
+        QMainWindow::keyPressEvent(event);
+    }
+}
+
 void MainWindow::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton && !juego_.nivelActivoFinalizado()) {
-        lanzarDiscoHacia(convertirALogica(event->position()));
+        const Posicion objetivo = convertirALogica(event->position());
+        if (dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual()) != nullptr) {
+            defenderEn(objetivo);
+        } else {
+            lanzarDiscoHacia(objetivo);
+        }
         update();
     }
 
@@ -56,6 +78,7 @@ void MainWindow::paintEvent(QPaintEvent* event) {
     }
 
     dibujarNivelRutaTransmision(painter);
+    dibujarNivelDefensaNucleo(painter);
     dibujarEstado(painter);
 }
 
@@ -90,6 +113,34 @@ void MainWindow::lanzarDiscoHacia(const Posicion& destino) {
     ultimoObjetivo_ = destino;
     tieneObjetivo_ = true;
     juego_.discoJugador().lanzarDesde(origen, direccion, 3.5F);
+}
+
+void MainWindow::defenderEn(const Posicion& objetivo) {
+    auto* nivel = dynamic_cast<NivelDefensaNucleo*>(juego_.nivelActual());
+    if (nivel == nullptr) {
+        return;
+    }
+
+    const auto& discos = nivel->obtenerDiscosEnemigos();
+    std::size_t indiceCercano = discos.size();
+    float distanciaCercana = std::numeric_limits<float>::max();
+
+    for (std::size_t i = 0; i < discos.size(); ++i) {
+        const DiscoEnemigo* disco = discos[i];
+        if (disco == nullptr || disco->estaDestruido()) {
+            continue;
+        }
+
+        const float distancia = disco->posicion().distanciaA(objetivo);
+        if (distancia < distanciaCercana) {
+            distanciaCercana = distancia;
+            indiceCercano = i;
+        }
+    }
+
+    if (indiceCercano < discos.size() && distanciaCercana <= 0.75F) {
+        nivel->destruirDiscoEnemigo(indiceCercano);
+    }
 }
 
 void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
@@ -164,20 +215,57 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
     painter.drawEllipse(disco, 7.0, 7.0);
 }
 
+void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
+    const auto* nivel = dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual());
+    if (nivel == nullptr) {
+        return;
+    }
+
+    painter.setPen(Qt::NoPen);
+
+    const QPointF jugador = convertirAPantalla(juego_.jugador().posicion());
+    painter.setBrush(QColor{40, 255, 210});
+    painter.drawEllipse(jugador, 16.0, 16.0);
+
+    for (const DiscoEnemigo* disco : nivel->obtenerDiscosEnemigos()) {
+        if (disco == nullptr) {
+            continue;
+        }
+
+        const QPointF centro = convertirAPantalla(disco->posicion());
+        painter.setBrush(disco->estaDestruido()
+            ? QColor{70, 80, 90}
+            : QColor{255, 80, 90});
+        painter.drawEllipse(centro, 10.0, 10.0);
+    }
+}
+
 void MainWindow::dibujarEstado(QPainter& painter) const {
     painter.setPen(QColor{220, 240, 255});
     painter.setFont(QFont{"Arial", 12});
     painter.drawText(20, 30, "Ultimate en TRON - prueba visual de logica");
-    painter.drawText(20, 52, "Nivel: Ruta de Transmision");
-    painter.drawText(20, 74, "Input: clic izquierdo para lanzar el disco");
+
+    if (const auto* nivelDefensa = dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual())) {
+        painter.drawText(20, 52, "Nivel: Defensa del Nucleo");
+        painter.drawText(20, 74, "Input: clic izquierdo sobre discos enemigos para destruirlos");
+        painter.drawText(
+            20,
+            96,
+            QString{"Tiempo restante: %1 s"}.arg(nivelDefensa->tiempoRestante().count() / 1000.0, 0, 'f', 1));
+    } else {
+        painter.drawText(20, 52, "Nivel: Ruta de Transmision");
+        painter.drawText(20, 74, "Input: clic izquierdo para lanzar el disco");
+    }
+
+    painter.drawText(20, 118, "Teclas: 1 Ruta | 2 Defensa");
 
     if (!juego_.nivelActivoFinalizado()) {
-        painter.drawText(20, 96, "Estado: en progreso");
+        painter.drawText(20, 140, "Estado: en progreso");
     } else if (juego_.nivelActivoVictoria()) {
-        painter.drawText(20, 96, "Estado: victoria");
+        painter.drawText(20, 140, "Estado: victoria");
     } else if (juego_.nivelActivoDerrota()) {
-        painter.drawText(20, 96, "Estado: derrota");
+        painter.drawText(20, 140, "Estado: derrota");
     } else {
-        painter.drawText(20, 96, "Estado: finalizado");
+        painter.drawText(20, 140, "Estado: finalizado");
     }
 }

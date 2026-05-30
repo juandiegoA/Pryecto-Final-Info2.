@@ -103,6 +103,14 @@ const std::vector<DiscoEnemigo*>& NivelDefensaNucleo::obtenerDiscosEnemigos() co
     return discosEnemigos;
 }
 
+std::chrono::milliseconds NivelDefensaNucleo::tiempoTranscurrido() const noexcept {
+    return temporizadorNivel_.tiempoTranscurrido();
+}
+
+std::chrono::milliseconds NivelDefensaNucleo::tiempoRestante() const noexcept {
+    return temporizadorNivel_.tiempoRestante();
+}
+
 bool NivelDefensaNucleo::estaEnCurso() const noexcept {
     return enCurso_;
 }
