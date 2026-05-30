@@ -11,4 +11,7 @@ public:
     virtual std::string nombre() const = 0;
     virtual void actualizar() = 0;
     virtual void actualizar(std::chrono::milliseconds intervalo);
+    virtual bool estaFinalizado() const = 0;
+    virtual bool victoria() const;
+    virtual bool derrota() const;
 };

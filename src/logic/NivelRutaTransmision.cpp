@@ -104,8 +104,12 @@ const NodoCentralEnergia* NivelRutaTransmision::metaFinal() const noexcept {
     return metaFinal_;
 }
 
-bool NivelRutaTransmision::estaFinalizado() const noexcept {
+bool NivelRutaTransmision::estaFinalizado() const {
     return metaFinal_ != nullptr && metaFinal_->nivelFinalizado();
+}
+
+bool NivelRutaTransmision::victoria() const {
+    return estaFinalizado();
 }
 
 bool NivelRutaTransmision::verificarLlegada(

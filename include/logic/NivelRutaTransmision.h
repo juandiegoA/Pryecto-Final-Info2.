@@ -33,7 +33,8 @@ public:
     const std::vector<Obstaculo*>& obtenerObstaculos() const noexcept;
     const Checkpoint* checkpointActual() const noexcept;
     const NodoCentralEnergia* metaFinal() const noexcept;
-    bool estaFinalizado() const noexcept;
+    bool estaFinalizado() const override;
+    bool victoria() const override;
     bool verificarLlegada(const Checkpoint& checkpoint, float tolerancia = 0.5F) const noexcept;
     bool verificarColisionConObstaculos() const noexcept;
     bool verificarColisionConDrones() const noexcept;
