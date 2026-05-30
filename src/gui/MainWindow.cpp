@@ -10,6 +10,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPolygonF>
+#include <QString>
 #include <QTimer>
 
 #include <chrono>
@@ -21,35 +22,60 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setMinimumSize(800, 450);
     setMouseTracking(true);
 
-    juego_.crearNivelRutaTransmision();
-
     reloj_.start();
     temporizador_ = new QTimer(this);
     temporizador_->setInterval(16);
     connect(temporizador_, &QTimer::timeout, this, [this]() {
         const auto intervalo = std::chrono::milliseconds{reloj_.restart()};
-        juego_.actualizar(intervalo);
+        if (pantalla_ == Pantalla::Jugando) {
+            juego_.actualizar(intervalo);
+        }
         update();
     });
     temporizador_->start();
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event) {
-    if (event->key() == Qt::Key_1) {
-        juego_.cambiarANivelRutaTransmision();
-        tieneObjetivo_ = false;
-        update();
-    } else if (event->key() == Qt::Key_2) {
-        juego_.cambiarANivelDefensaNucleo();
-        tieneObjetivo_ = false;
-        update();
-    } else {
+    switch (event->key()) {
+    case Qt::Key_1:
+        iniciarNivelRutaTransmision();
+        break;
+    case Qt::Key_2:
+        iniciarNivelDefensaNucleo();
+        break;
+    case Qt::Key_Escape:
+    case Qt::Key_M:
+        volverAlMenu();
+        break;
+    case Qt::Key_R:
+        reiniciarNivelActual();
+        break;
+    default:
         QMainWindow::keyPressEvent(event);
+        break;
     }
 }
 
 void MainWindow::mousePressEvent(QMouseEvent* event) {
-    if (event->button() == Qt::LeftButton && !juego_.nivelActivoFinalizado()) {
+    if (event->button() != Qt::LeftButton) {
+        QMainWindow::mousePressEvent(event);
+        return;
+    }
+
+    if (pantalla_ == Pantalla::Menu) {
+        const QPointF punto = event->position();
+        if (botonNivel1().contains(punto)) {
+            iniciarNivelRutaTransmision();
+        } else if (botonNivel2().contains(punto)) {
+            iniciarNivelDefensaNucleo();
+        } else if (botonSalir().contains(punto)) {
+            close();
+        }
+        QMainWindow::mousePressEvent(event);
+        return;
+    }
+
+    if (!juego_.nivelActivoFinalizado()) {
         const Posicion objetivo = convertirALogica(event->position());
         if (dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual()) != nullptr) {
             defenderEn(objetivo);
@@ -77,6 +103,11 @@ void MainWindow::paintEvent(QPaintEvent* event) {
         painter.drawLine(0, y, width(), y);
     }
 
+    if (pantalla_ == Pantalla::Menu) {
+        dibujarMenu(painter);
+        return;
+    }
+
     dibujarNivelRutaTransmision(painter);
     dibujarNivelDefensaNucleo(painter);
     dibujarEstado(painter);
@@ -98,6 +129,51 @@ Posicion MainWindow::convertirALogica(const QPointF& punto) const {
     return Posicion{
         static_cast<float>((punto.x() - origenX) / escala),
         static_cast<float>((origenY - punto.y()) / escala)};
+}
+
+QRectF MainWindow::botonNivel1() const {
+    return QRectF{width() / 2.0 - 140.0, height() / 2.0 - 34.0, 280.0, 42.0};
+}
+
+QRectF MainWindow::botonNivel2() const {
+    return QRectF{width() / 2.0 - 140.0, height() / 2.0 + 22.0, 280.0, 42.0};
+}
+
+QRectF MainWindow::botonSalir() const {
+    return QRectF{width() / 2.0 - 140.0, height() / 2.0 + 78.0, 280.0, 42.0};
+}
+
+void MainWindow::iniciarNivelRutaTransmision() {
+    juego_.cambiarANivelRutaTransmision();
+    pantalla_ = Pantalla::Jugando;
+    tieneObjetivo_ = false;
+    reloj_.restart();
+    update();
+}
+
+void MainWindow::iniciarNivelDefensaNucleo() {
+    juego_.cambiarANivelDefensaNucleo();
+    pantalla_ = Pantalla::Jugando;
+    tieneObjetivo_ = false;
+    reloj_.restart();
+    update();
+}
+
+void MainWindow::volverAlMenu() {
+    pantalla_ = Pantalla::Menu;
+    tieneObjetivo_ = false;
+    update();
+}
+
+void MainWindow::reiniciarNivelActual() {
+    if (pantalla_ != Pantalla::Jugando) {
+        return;
+    }
+
+    juego_.reiniciarNivelActivo();
+    tieneObjetivo_ = false;
+    reloj_.restart();
+    update();
 }
 
 void MainWindow::lanzarDiscoHacia(const Posicion& destino) {
@@ -141,6 +217,40 @@ void MainWindow::defenderEn(const Posicion& objetivo) {
     if (indiceCercano < discos.size() && distanciaCercana <= 0.75F) {
         nivel->destruirDiscoEnemigo(indiceCercano);
     }
+}
+
+void MainWindow::dibujarMenu(QPainter& painter) const {
+    painter.setPen(QColor{220, 245, 255});
+    painter.setFont(QFont{"Arial", 26, QFont::Bold});
+    painter.drawText(QRectF{0.0, 80.0, static_cast<double>(width()), 50.0}, Qt::AlignCenter, "Ultimate en TRON");
+
+    painter.setFont(QFont{"Arial", 12});
+    painter.drawText(
+        QRectF{0.0, 132.0, static_cast<double>(width()), 30.0},
+        Qt::AlignCenter,
+        "Selecciona un nivel para jugar");
+
+    const QList<QPair<QRectF, QString>> botones{
+        {botonNivel1(), "Jugar Nivel 1 - Ruta de Transmision"},
+        {botonNivel2(), "Jugar Nivel 2 - Defensa del Nucleo"},
+        {botonSalir(), "Salir"}};
+
+    for (const auto& boton : botones) {
+        painter.setPen(QPen(QColor{80, 220, 255}, 2));
+        painter.setBrush(QColor{18, 35, 58});
+        painter.drawRoundedRect(boton.first, 8.0, 8.0);
+
+        painter.setPen(QColor{235, 250, 255});
+        painter.setFont(QFont{"Arial", 12, QFont::Bold});
+        painter.drawText(boton.first, Qt::AlignCenter, boton.second);
+    }
+
+    painter.setPen(QColor{160, 190, 210});
+    painter.setFont(QFont{"Arial", 10});
+    painter.drawText(
+        QRectF{0.0, height() - 42.0, static_cast<double>(width()), 24.0},
+        Qt::AlignCenter,
+        "Atajos: 1 Nivel 1 | 2 Nivel 2 | Esc/M Menu | R Reiniciar");
 }
 
 void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
@@ -243,21 +353,42 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
 void MainWindow::dibujarEstado(QPainter& painter) const {
     painter.setPen(QColor{220, 240, 255});
     painter.setFont(QFont{"Arial", 12});
-    painter.drawText(20, 30, "Ultimate en TRON - prueba visual de logica");
+    painter.drawText(20, 30, "Ultimate en TRON");
 
     if (const auto* nivelDefensa = dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual())) {
         painter.drawText(20, 52, "Nivel: Defensa del Nucleo");
-        painter.drawText(20, 74, "Input: clic izquierdo sobre discos enemigos para destruirlos");
         painter.drawText(
             20,
-            96,
+            74,
             QString{"Tiempo restante: %1 s"}.arg(nivelDefensa->tiempoRestante().count() / 1000.0, 0, 'f', 1));
+        int discosActivos = 0;
+        for (const DiscoEnemigo* disco : nivelDefensa->obtenerDiscosEnemigos()) {
+            if (disco != nullptr && !disco->estaDestruido()) {
+                ++discosActivos;
+            }
+        }
+        painter.drawText(20, 96, QString{"Discos enemigos activos: %1"}.arg(discosActivos));
     } else {
+        const auto* nivelRuta = dynamic_cast<const NivelRutaTransmision*>(juego_.nivelActual());
         painter.drawText(20, 52, "Nivel: Ruta de Transmision");
-        painter.drawText(20, 74, "Input: clic izquierdo para lanzar el disco");
+        if (nivelRuta != nullptr) {
+            const Checkpoint* objetivo = nivelRuta->objetivoActualCheckpoint();
+            const QString checkpoint = objetivo != nullptr
+                ? QString::fromStdString(objetivo->id())
+                : QString{"sin objetivo"};
+            painter.drawText(20, 74, QString{"Checkpoint objetivo: %1"}.arg(checkpoint));
+            painter.drawText(
+                20,
+                96,
+                QString{"Tiempo restante: %1 s"}.arg(
+                    nivelRuta->tiempoRestanteCheckpoint().count() / 1000.0,
+                    0,
+                    'f',
+                    1));
+        }
     }
 
-    painter.drawText(20, 118, "Teclas: 1 Ruta | 2 Defensa");
+    painter.drawText(20, 118, "Controles: clic accion | R reiniciar | Esc/M menu");
 
     if (!juego_.nivelActivoFinalizado()) {
         painter.drawText(20, 140, "Estado: en progreso");

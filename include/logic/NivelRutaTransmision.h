@@ -32,7 +32,9 @@ public:
     const std::vector<Dron*>& obtenerDrones() const noexcept;
     const std::vector<Obstaculo*>& obtenerObstaculos() const noexcept;
     const Checkpoint* checkpointActual() const noexcept;
+    const Checkpoint* objetivoActualCheckpoint() const noexcept;
     const NodoCentralEnergia* metaFinal() const noexcept;
+    std::chrono::milliseconds tiempoRestanteCheckpoint() const noexcept;
     bool estaFinalizado() const override;
     bool victoria() const override;
     bool verificarLlegada(const Checkpoint& checkpoint, float tolerancia = 0.5F) const noexcept;

@@ -100,8 +100,16 @@ const Checkpoint* NivelRutaTransmision::checkpointActual() const noexcept {
     return checkpointActual_;
 }
 
+const Checkpoint* NivelRutaTransmision::objetivoActualCheckpoint() const noexcept {
+    return objetivoActual();
+}
+
 const NodoCentralEnergia* NivelRutaTransmision::metaFinal() const noexcept {
     return metaFinal_;
+}
+
+std::chrono::milliseconds NivelRutaTransmision::tiempoRestanteCheckpoint() const noexcept {
+    return temporizadorCheckpoint_.tiempoRestante();
 }
 
 bool NivelRutaTransmision::estaFinalizado() const {
