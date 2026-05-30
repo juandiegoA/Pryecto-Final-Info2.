@@ -136,7 +136,7 @@ void Juego::configurarNivelRutaTransmision() {
     nivel->establecerMetaFinal(*metaFinal_);
 
     obstaculos_.push_back(std::make_unique<BarreraEstatica>(
-        Posicion{6.0F, 1.0F},
+        Posicion{6.0F, -1.5F},
         0.5F));
     obstaculos_.push_back(std::make_unique<BarreraTemporizada>(
         Posicion{10.0F, 1.0F},

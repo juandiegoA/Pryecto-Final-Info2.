@@ -9,6 +9,7 @@ public:
     virtual ~Disco();
 
     const Posicion& posicion() const noexcept;
+    const Posicion& posicionAnterior() const noexcept;
     float velocidad() const noexcept;
     const Posicion& direccion() const noexcept;
     bool estaActivo() const noexcept;
@@ -20,9 +21,11 @@ public:
     void reiniciar() noexcept;
     void reiniciarEn(const Posicion& posicion) noexcept;
     bool colisionaCon(const Posicion& punto, float tolerancia) const noexcept;
+    bool cruzaPor(const Posicion& punto, float tolerancia) const noexcept;
 
 protected:
     Posicion posicion_;
+    Posicion posicionAnterior_;
     Posicion posicionInicial_;
     Posicion direccion_;
     float velocidad_{0.0F};

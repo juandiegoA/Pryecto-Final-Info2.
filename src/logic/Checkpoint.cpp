@@ -40,5 +40,5 @@ void Checkpoint::desactivar() noexcept {
 }
 
 bool Checkpoint::verificarLlegada(const Disco& disco, float tolerancia) const noexcept {
-    return disco.colisionaCon(posicion_, tolerancia);
+    return disco.cruzaPor(posicion_, tolerancia);
 }
