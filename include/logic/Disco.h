@@ -18,6 +18,7 @@ public:
     void actualizar(float segundos) noexcept;
     void detener() noexcept;
     void reiniciar() noexcept;
+    void reiniciarEn(const Posicion& posicion) noexcept;
     bool colisionaCon(const Posicion& punto, float tolerancia) const noexcept;
 
 protected:

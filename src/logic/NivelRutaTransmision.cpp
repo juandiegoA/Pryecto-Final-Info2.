@@ -151,13 +151,16 @@ void NivelRutaTransmision::reiniciarDesdeUltimoCheckpoint() {
         return;
     }
 
+    Posicion posicionReinicio = jugador_->posicion();
     if (checkpointActual_ != nullptr) {
-        jugador_->teletransportarA(checkpointActual_->posicion());
+        posicionReinicio = checkpointActual_->posicion();
+        jugador_->teletransportarA(posicionReinicio);
     } else {
         jugador_->reiniciar();
+        posicionReinicio = jugador_->posicion();
     }
 
-    disco_->reiniciar();
+    disco_->reiniciarEn(posicionReinicio);
     iniciarTiempoObjetivo();
 }
 
@@ -183,14 +186,15 @@ void NivelRutaTransmision::alcanzarObjetivo(Checkpoint& checkpoint) {
     checkpoint.activar();
     checkpointActual_ = &checkpoint;
     jugador_->teletransportarA(checkpoint.posicion());
-    disco_->reiniciar();
 
-    if (&checkpoint == metaFinal_) {
+    if (metaFinal_ != nullptr && &checkpoint == static_cast<Checkpoint*>(metaFinal_)) {
         metaFinal_->marcarFinNivel();
         temporizadorCheckpoint_.detener();
+        disco_->detener();
         return;
     }
 
+    disco_->reiniciarEn(checkpoint.posicion());
     ++indiceObjetivo_;
     iniciarTiempoObjetivo();
 }

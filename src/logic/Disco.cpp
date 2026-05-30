@@ -63,6 +63,11 @@ void Disco::detener() noexcept {
 }
 
 void Disco::reiniciar() noexcept {
+    reiniciarEn(posicionInicial_);
+}
+
+void Disco::reiniciarEn(const Posicion& posicion) noexcept {
+    posicionInicial_ = posicion;
     posicion_ = posicionInicial_;
     direccion_ = Posicion{};
     velocidad_ = 0.0F;

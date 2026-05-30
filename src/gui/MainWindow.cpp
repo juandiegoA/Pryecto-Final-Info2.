@@ -4,6 +4,7 @@
 #include "logic/BarreraTemporizada.h"
 #include "logic/NivelRutaTransmision.h"
 
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPolygonF>
@@ -15,12 +16,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("Ultimate en TRON");
     resize(960, 540);
     setMinimumSize(800, 450);
+    setMouseTracking(true);
 
     juego_.crearNivelRutaTransmision();
-    juego_.discoJugador().lanzarDesde(
-        juego_.jugador().posicion(),
-        Posicion{1.0F, 0.0F},
-        2.0F);
 
     reloj_.start();
     temporizador_ = new QTimer(this);
@@ -31,6 +29,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         update();
     });
     temporizador_->start();
+}
+
+void MainWindow::mousePressEvent(QMouseEvent* event) {
+    if (event->button() == Qt::LeftButton && !juego_.nivelActivoFinalizado()) {
+        lanzarDiscoHacia(convertirALogica(event->position()));
+        update();
+    }
+
+    QMainWindow::mousePressEvent(event);
 }
 
 void MainWindow::paintEvent(QPaintEvent* event) {
@@ -59,6 +66,30 @@ QPointF MainWindow::convertirAPantalla(const Posicion& posicion) const {
     return QPointF{
         origenX + posicion.x() * escala,
         origenY - posicion.y() * escala};
+}
+
+Posicion MainWindow::convertirALogica(const QPointF& punto) const {
+    constexpr double escala = 55.0;
+    const double origenX = 80.0;
+    const double origenY = height() / 2.0;
+    return Posicion{
+        static_cast<float>((punto.x() - origenX) / escala),
+        static_cast<float>((origenY - punto.y()) / escala)};
+}
+
+void MainWindow::lanzarDiscoHacia(const Posicion& destino) {
+    const Posicion origen = juego_.jugador().posicion();
+    const Posicion direccion{
+        destino.x() - origen.x(),
+        destino.y() - origen.y()};
+
+    if (direccion.distanciaA(Posicion{}) <= 0.01F) {
+        return;
+    }
+
+    ultimoObjetivo_ = destino;
+    tieneObjetivo_ = true;
+    juego_.discoJugador().lanzarDesde(origen, direccion, 3.5F);
 }
 
 void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
@@ -117,6 +148,12 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
     }
 
     const QPointF jugador = convertirAPantalla(juego_.jugador().posicion());
+    if (tieneObjetivo_) {
+        painter.setPen(QPen(QColor{120, 240, 255}, 2, Qt::DashLine));
+        painter.drawLine(jugador, convertirAPantalla(ultimoObjetivo_));
+        painter.setPen(Qt::NoPen);
+    }
+
     painter.setBrush(QColor{40, 255, 210});
     painter.drawEllipse(jugador, 14.0, 14.0);
 
@@ -132,14 +169,15 @@ void MainWindow::dibujarEstado(QPainter& painter) const {
     painter.setFont(QFont{"Arial", 12});
     painter.drawText(20, 30, "Ultimate en TRON - prueba visual de logica");
     painter.drawText(20, 52, "Nivel: Ruta de Transmision");
+    painter.drawText(20, 74, "Input: clic izquierdo para lanzar el disco");
 
     if (!juego_.nivelActivoFinalizado()) {
-        painter.drawText(20, 74, "Estado: en progreso");
+        painter.drawText(20, 96, "Estado: en progreso");
     } else if (juego_.nivelActivoVictoria()) {
-        painter.drawText(20, 74, "Estado: victoria");
+        painter.drawText(20, 96, "Estado: victoria");
     } else if (juego_.nivelActivoDerrota()) {
-        painter.drawText(20, 74, "Estado: derrota");
+        painter.drawText(20, 96, "Estado: derrota");
     } else {
-        painter.drawText(20, 74, "Estado: finalizado");
+        painter.drawText(20, 96, "Estado: finalizado");
     }
 }
