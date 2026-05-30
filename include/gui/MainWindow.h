@@ -46,6 +46,7 @@ private:
     void dibujarNivelRutaTransmision(QPainter& painter);
     void dibujarNivelDefensaNucleo(QPainter& painter);
     void dibujarEstado(QPainter& painter) const;
+    void dibujarOverlayFinal(QPainter& painter) const;
 
     Juego juego_;
     QTimer* temporizador_{nullptr};

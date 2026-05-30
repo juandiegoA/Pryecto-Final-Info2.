@@ -13,8 +13,8 @@
 #include <QString>
 #include <QTimer>
 
+#include <algorithm>
 #include <chrono>
-#include <limits>
 #include <vector>
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -113,6 +113,7 @@ void MainWindow::paintEvent(QPaintEvent* event) {
     dibujarNivelRutaTransmision(painter);
     dibujarNivelDefensaNucleo(painter);
     dibujarEstado(painter);
+    dibujarOverlayFinal(painter);
 }
 
 QPointF MainWindow::convertirAPantalla(const Posicion& posicion) const {
@@ -413,69 +414,104 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
         painter.drawEllipse(proyectil, 6.0 * escala, 6.0 * escala);
     }
 
-    if (nivel->estaFinalizado()) {
-        painter.setBrush(QColor{5, 10, 20, 170});
-        painter.setPen(Qt::NoPen);
-        painter.drawRoundedRect(
-            QRectF{width() / 2.0 - 190.0, height() / 2.0 - 56.0, 380.0, 112.0},
-            12.0,
-            12.0);
-        painter.setPen(nivel->victoria() ? QColor{90, 255, 170} : QColor{255, 95, 105});
-        painter.setFont(QFont{"Arial", 24, QFont::Bold});
-        painter.drawText(
-            QRectF{width() / 2.0 - 180.0, height() / 2.0 - 38.0, 360.0, 40.0},
-            Qt::AlignCenter,
-            nivel->victoria() ? "VICTORIA" : "DERROTA");
-        painter.setPen(QColor{220, 240, 255});
-        painter.setFont(QFont{"Arial", 11});
-        painter.drawText(
-            QRectF{width() / 2.0 - 180.0, height() / 2.0 + 6.0, 360.0, 26.0},
-            Qt::AlignCenter,
-            "R para reiniciar | Esc para volver al menu");
-    }
 }
 
 void MainWindow::dibujarEstado(QPainter& painter) const {
-    painter.setPen(QColor{220, 240, 255});
-    painter.setFont(QFont{"Arial", 12});
-    painter.drawText(20, 30, "Ultimate en TRON");
+    const QRectF panel{18.0, 18.0, 310.0, 154.0};
+    painter.setPen(QPen(QColor{80, 220, 255}, 1));
+    painter.setBrush(QColor{7, 18, 32, 210});
+    painter.drawRoundedRect(panel, 10.0, 10.0);
+
+    painter.setPen(QColor{110, 245, 255});
+    painter.setFont(QFont{"Arial", 15, QFont::Bold});
+    painter.drawText(QRectF{34.0, 28.0, 280.0, 24.0}, Qt::AlignLeft, "ULTIMATE EN TRON");
+
+    QString nivelTexto = "Nivel: desconocido";
+    QString tiempoTexto = "Tiempo: --";
+    QString objetivoTexto = "Objetivo: --";
 
     if (const auto* nivelDefensa = dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual())) {
-        painter.drawText(20, 52, "Nivel: Defensa del Nucleo");
-        painter.drawText(
-            20,
-            74,
-            QString{"Tiempo restante: %1 s"}.arg(nivelDefensa->tiempoRestante().count() / 1000.0, 0, 'f', 1));
-        painter.drawText(20, 96, QString{"Discos enemigos activos: %1"}.arg(nivelDefensa->discosActivos()));
+        nivelTexto = "Nivel: Defensa del Nucleo";
+        tiempoTexto = QString{"Tiempo: %1 s"}.arg(nivelDefensa->tiempoRestante().count() / 1000.0, 0, 'f', 1);
+        objetivoTexto = QString{"Amenazas activas: %1"}.arg(nivelDefensa->discosActivos());
     } else {
         const auto* nivelRuta = dynamic_cast<const NivelRutaTransmision*>(juego_.nivelActual());
-        painter.drawText(20, 52, "Nivel: Ruta de Transmision");
+        nivelTexto = "Nivel: Ruta de Transmision";
         if (nivelRuta != nullptr) {
             const Checkpoint* objetivo = nivelRuta->objetivoActualCheckpoint();
             const QString checkpoint = objetivo != nullptr
                 ? QString::fromStdString(objetivo->id())
                 : QString{"sin objetivo"};
-            painter.drawText(20, 74, QString{"Checkpoint objetivo: %1"}.arg(checkpoint));
-            painter.drawText(
-                20,
-                96,
-                QString{"Tiempo restante: %1 s"}.arg(
-                    nivelRuta->tiempoRestanteCheckpoint().count() / 1000.0,
-                    0,
-                    'f',
-                    1));
+            objetivoTexto = QString{"Objetivo: %1"}.arg(checkpoint);
+            tiempoTexto = QString{"Tiempo: %1 s"}.arg(
+                nivelRuta->tiempoRestanteCheckpoint().count() / 1000.0,
+                0,
+                'f',
+                1);
         }
     }
 
-    painter.drawText(20, 118, "Controles: clic accion | R reiniciar | Esc/M menu");
-
+    QString estadoTexto = "Estado: en progreso";
     if (!juego_.nivelActivoFinalizado()) {
-        painter.drawText(20, 140, "Estado: en progreso");
+        estadoTexto = "Estado: en progreso";
     } else if (juego_.nivelActivoVictoria()) {
-        painter.drawText(20, 140, "Estado: victoria");
+        estadoTexto = "Estado: victoria";
     } else if (juego_.nivelActivoDerrota()) {
-        painter.drawText(20, 140, "Estado: derrota");
+        estadoTexto = "Estado: derrota";
     } else {
-        painter.drawText(20, 140, "Estado: finalizado");
+        estadoTexto = "Estado: finalizado";
     }
+
+    painter.setFont(QFont{"Arial", 10});
+    painter.setPen(QColor{220, 240, 255});
+    painter.drawText(34, 66, nivelTexto);
+    painter.drawText(34, 88, tiempoTexto);
+    painter.drawText(34, 110, objetivoTexto);
+    painter.drawText(34, 132, estadoTexto);
+
+    painter.setPen(QColor{150, 205, 225});
+    painter.drawText(34, 154, "Clic: accion | R: reiniciar | Esc/M: menu");
+}
+
+void MainWindow::dibujarOverlayFinal(QPainter& painter) const {
+    if (!juego_.nivelActivoFinalizado()) {
+        return;
+    }
+
+    const bool victoria = juego_.nivelActivoVictoria();
+    const QColor acento = victoria ? QColor{90, 255, 170} : QColor{255, 95, 105};
+    const QString titulo = victoria ? "VICTORIA" : "DERROTA";
+    const QString subtitulo = victoria
+        ? "Sistema estabilizado. Ruta completada."
+        : "Conexion perdida. Reintenta la secuencia.";
+
+    painter.setBrush(QColor{3, 8, 18, 188});
+    painter.setPen(Qt::NoPen);
+    painter.drawRect(rect());
+
+    const QRectF tarjeta{width() / 2.0 - 230.0, height() / 2.0 - 86.0, 460.0, 172.0};
+    painter.setBrush(QColor{7, 18, 32, 235});
+    painter.setPen(QPen(acento, 2));
+    painter.drawRoundedRect(tarjeta, 14.0, 14.0);
+
+    painter.setPen(acento);
+    painter.setFont(QFont{"Arial", 28, QFont::Bold});
+    painter.drawText(
+        QRectF{tarjeta.x() + 20.0, tarjeta.y() + 26.0, tarjeta.width() - 40.0, 42.0},
+        Qt::AlignCenter,
+        titulo);
+
+    painter.setPen(QColor{220, 240, 255});
+    painter.setFont(QFont{"Arial", 11});
+    painter.drawText(
+        QRectF{tarjeta.x() + 28.0, tarjeta.y() + 78.0, tarjeta.width() - 56.0, 28.0},
+        Qt::AlignCenter,
+        subtitulo);
+
+    painter.setPen(QColor{150, 225, 245});
+    painter.setFont(QFont{"Arial", 10, QFont::Bold});
+    painter.drawText(
+        QRectF{tarjeta.x() + 28.0, tarjeta.y() + 118.0, tarjeta.width() - 56.0, 28.0},
+        Qt::AlignCenter,
+        "R para reiniciar | Esc o M para volver al menu");
 }
