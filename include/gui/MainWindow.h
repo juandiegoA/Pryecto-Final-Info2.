@@ -30,6 +30,9 @@ private:
 
     QPointF convertirAPantalla(const Posicion& posicion) const;
     Posicion convertirALogica(const QPointF& punto) const;
+    QPointF convertirDefensaAPantalla(const Posicion& posicion) const;
+    Posicion convertirDefensaALogica(const QPointF& punto) const;
+    double escalaDefensa(const Posicion& posicion) const;
     QRectF botonNivel1() const;
     QRectF botonNivel2() const;
     QRectF botonSalir() const;

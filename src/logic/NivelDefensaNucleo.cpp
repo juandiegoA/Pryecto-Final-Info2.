@@ -28,6 +28,7 @@ void NivelDefensaNucleo::actualizar(std::chrono::milliseconds intervalo) {
     }
 
     temporizadorNivel_.actualizar(intervalo);
+    generarDiscosSiHaceFalta(intervalo);
 
     if (temporizadorNivel_.duracion().count() > 0
         && temporizadorNivel_.estaAgotado()) {
@@ -59,6 +60,8 @@ void NivelDefensaNucleo::configurarTiempoObjetivo(
 
 void NivelDefensaNucleo::iniciar() {
     temporizadorNivel_.iniciar();
+    tiempoDesdeUltimoDisparo_ = intervaloDisparo_;
+    siguienteCarril_ = 0;
     enCurso_ = true;
     victoria_ = false;
     derrota_ = false;
@@ -103,6 +106,17 @@ const std::vector<DiscoEnemigo*>& NivelDefensaNucleo::obtenerDiscosEnemigos() co
     return discosEnemigos;
 }
 
+std::size_t NivelDefensaNucleo::discosActivos() const noexcept {
+    std::size_t activos = 0;
+    for (const DiscoEnemigo* disco : discosEnemigos) {
+        if (disco != nullptr && !disco->estaDestruido()) {
+            ++activos;
+        }
+    }
+
+    return activos;
+}
+
 std::chrono::milliseconds NivelDefensaNucleo::tiempoTranscurrido() const noexcept {
     return temporizadorNivel_.tiempoTranscurrido();
 }
@@ -133,6 +147,29 @@ void NivelDefensaNucleo::moverDiscos(float segundos) noexcept {
             disco->avanzarHacia(*jugador_, segundos, velocidadDiscoEnemigo_);
         }
     }
+}
+
+void NivelDefensaNucleo::generarDiscosSiHaceFalta(std::chrono::milliseconds intervalo) {
+    if (!enCurso_ || intervalo.count() <= 0 || discosActivos() >= maxDiscosActivos_) {
+        return;
+    }
+
+    tiempoDesdeUltimoDisparo_ += intervalo;
+    if (tiempoDesdeUltimoDisparo_ < intervaloDisparo_) {
+        return;
+    }
+
+    const Posicion carriles[] = {
+        Posicion{-3.5F, 9.5F},
+        Posicion{0.0F, 10.5F},
+        Posicion{3.5F, 9.5F},
+        Posicion{-1.8F, 8.5F},
+        Posicion{1.8F, 8.5F}
+    };
+    const Posicion origen = carriles[siguienteCarril_ % std::size(carriles)];
+    ++siguienteCarril_;
+    generarDiscoEnemigo(origen);
+    tiempoDesdeUltimoDisparo_ = std::chrono::milliseconds{0};
 }
 
 void NivelDefensaNucleo::declararVictoria() noexcept {

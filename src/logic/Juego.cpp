@@ -183,13 +183,14 @@ void Juego::configurarNivelDefensaNucleo() {
 
     auto nivel = std::make_unique<NivelDefensaNucleo>(jugador_, 30000ms);
 
-    discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{6.0F, 0.0F}));
-    discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{-6.0F, 2.0F}));
+    discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{-2.5F, 8.0F}));
+    discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{2.5F, 9.5F}));
 
     for (const auto& discoEnemigo : discosEnemigos_) {
         nivel->agregarDiscoEnemigo(*discoEnemigo);
     }
 
+    nivel->iniciar();
     nivelActual_ = std::move(nivel);
     tipoNivelActivo_ = TipoNivelActivo::DefensaNucleo;
 }

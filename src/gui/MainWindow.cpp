@@ -76,10 +76,11 @@ void MainWindow::mousePressEvent(QMouseEvent* event) {
     }
 
     if (!juego_.nivelActivoFinalizado()) {
-        const Posicion objetivo = convertirALogica(event->position());
         if (dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual()) != nullptr) {
+            const Posicion objetivo = convertirDefensaALogica(event->position());
             defenderEn(objetivo);
         } else {
+            const Posicion objetivo = convertirALogica(event->position());
             lanzarDiscoHacia(objetivo);
         }
         update();
@@ -129,6 +130,38 @@ Posicion MainWindow::convertirALogica(const QPointF& punto) const {
     return Posicion{
         static_cast<float>((punto.x() - origenX) / escala),
         static_cast<float>((origenY - punto.y()) / escala)};
+}
+
+QPointF MainWindow::convertirDefensaAPantalla(const Posicion& posicion) const {
+    constexpr double profundidadMaxima = 10.5;
+    const double centroX = width() / 2.0;
+    const double fondoY = height() - 82.0;
+    const double horizonteY = 92.0;
+    const double t = std::clamp(static_cast<double>(posicion.y()) / profundidadMaxima, 0.0, 1.0);
+    const double ancho = 54.0 + 18.0 * (1.0 - t);
+
+    return QPointF{
+        centroX + posicion.x() * ancho,
+        fondoY - (fondoY - horizonteY) * t};
+}
+
+Posicion MainWindow::convertirDefensaALogica(const QPointF& punto) const {
+    constexpr double profundidadMaxima = 10.5;
+    const double centroX = width() / 2.0;
+    const double fondoY = height() - 82.0;
+    const double horizonteY = 92.0;
+    const double t = std::clamp((fondoY - punto.y()) / (fondoY - horizonteY), 0.0, 1.0);
+    const double ancho = 54.0 + 18.0 * (1.0 - t);
+
+    return Posicion{
+        static_cast<float>((punto.x() - centroX) / ancho),
+        static_cast<float>(t * profundidadMaxima)};
+}
+
+double MainWindow::escalaDefensa(const Posicion& posicion) const {
+    constexpr double profundidadMaxima = 10.5;
+    const double t = std::clamp(static_cast<double>(posicion.y()) / profundidadMaxima, 0.0, 1.0);
+    return 0.58 + (1.0 - t) * 0.72;
 }
 
 QRectF MainWindow::botonNivel1() const {
@@ -214,7 +247,7 @@ void MainWindow::defenderEn(const Posicion& objetivo) {
         }
     }
 
-    if (indiceCercano < discos.size() && distanciaCercana <= 0.75F) {
+    if (indiceCercano < discos.size() && distanciaCercana <= 0.95F) {
         nivel->destruirDiscoEnemigo(indiceCercano);
     }
 }
@@ -331,22 +364,42 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
         return;
     }
 
-    painter.setPen(Qt::NoPen);
+    const QPointF jugador = convertirDefensaAPantalla(juego_.jugador().posicion());
 
-    const QPointF jugador = convertirAPantalla(juego_.jugador().posicion());
+    painter.setPen(QPen(QColor{45, 120, 170}, 2));
+    painter.drawLine(QPointF{width() / 2.0 - 260.0, height() - 40.0}, QPointF{width() / 2.0 - 32.0, 92.0});
+    painter.drawLine(QPointF{width() / 2.0 + 260.0, height() - 40.0}, QPointF{width() / 2.0 + 32.0, 92.0});
+    painter.setPen(QPen(QColor{25, 80, 120}, 1, Qt::DashLine));
+    for (int i = 1; i <= 4; ++i) {
+        const double y = height() - 82.0 - i * ((height() - 174.0) / 5.0);
+        painter.drawLine(QPointF{width() / 2.0 - 210.0 + i * 30.0, y}, QPointF{width() / 2.0 + 210.0 - i * 30.0, y});
+    }
+
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor{20, 36, 58, 180});
+    painter.drawEllipse(jugador, 58.0, 22.0);
     painter.setBrush(QColor{40, 255, 210});
-    painter.drawEllipse(jugador, 16.0, 16.0);
+    painter.drawEllipse(jugador, 20.0, 20.0);
 
     for (const DiscoEnemigo* disco : nivel->obtenerDiscosEnemigos()) {
         if (disco == nullptr) {
             continue;
         }
 
-        const QPointF centro = convertirAPantalla(disco->posicion());
+        const QPointF centro = convertirDefensaAPantalla(disco->posicion());
+        const double escala = escalaDefensa(disco->posicion());
+        const double radio = 9.0 * escala;
+        painter.setPen(QPen(QColor{255, 150, 120, 170}, 2));
+        painter.drawLine(centro, jugador);
+        painter.setPen(Qt::NoPen);
         painter.setBrush(disco->estaDestruido()
             ? QColor{70, 80, 90}
             : QColor{255, 80, 90});
-        painter.drawEllipse(centro, 10.0, 10.0);
+        painter.drawEllipse(centro, radio, radio);
+        if (!disco->estaDestruido()) {
+            painter.setBrush(QColor{255, 230, 170});
+            painter.drawEllipse(centro, radio * 0.35, radio * 0.35);
+        }
     }
 }
 
@@ -361,13 +414,7 @@ void MainWindow::dibujarEstado(QPainter& painter) const {
             20,
             74,
             QString{"Tiempo restante: %1 s"}.arg(nivelDefensa->tiempoRestante().count() / 1000.0, 0, 'f', 1));
-        int discosActivos = 0;
-        for (const DiscoEnemigo* disco : nivelDefensa->obtenerDiscosEnemigos()) {
-            if (disco != nullptr && !disco->estaDestruido()) {
-                ++discosActivos;
-            }
-        }
-        painter.drawText(20, 96, QString{"Discos enemigos activos: %1"}.arg(discosActivos));
+        painter.drawText(20, 96, QString{"Discos enemigos activos: %1"}.arg(nivelDefensa->discosActivos()));
     } else {
         const auto* nivelRuta = dynamic_cast<const NivelRutaTransmision*>(juego_.nivelActual());
         painter.drawText(20, 52, "Nivel: Ruta de Transmision");
