@@ -8,6 +8,7 @@
 
 class Checkpoint;
 class Disco;
+class Dron;
 class Jugador;
 class NodoCentralEnergia;
 class Obstaculo;
@@ -23,16 +24,19 @@ public:
 
     void configurarActores(Jugador& jugador, Disco& disco) noexcept;
     void agregarCheckpoint(Checkpoint& checkpoint);
+    void agregarDron(Dron& dron);
     void agregarObstaculo(Obstaculo& obstaculo);
     void establecerMetaFinal(NodoCentralEnergia& meta) noexcept;
 
     const std::vector<Checkpoint*>& obtenerCheckpoints() const noexcept;
+    const std::vector<Dron*>& obtenerDrones() const noexcept;
     const std::vector<Obstaculo*>& obtenerObstaculos() const noexcept;
     const Checkpoint* checkpointActual() const noexcept;
     const NodoCentralEnergia* metaFinal() const noexcept;
     bool estaFinalizado() const noexcept;
     bool verificarLlegada(const Checkpoint& checkpoint, float tolerancia = 0.5F) const noexcept;
     bool verificarColisionConObstaculos() const noexcept;
+    bool verificarColisionConDrones() const noexcept;
     void reiniciarDesdeUltimoCheckpoint();
 
 private:
@@ -41,6 +45,7 @@ private:
     void alcanzarObjetivo(Checkpoint& checkpoint);
 
     std::vector<Checkpoint*> checkpoints;
+    std::vector<Dron*> drones;
     std::vector<Obstaculo*> obstaculos;
     Jugador* jugador_{nullptr};
     Disco* disco_{nullptr};
@@ -49,4 +54,5 @@ private:
     std::size_t indiceObjetivo_{0};
     Temporizador temporizadorCheckpoint_;
     float toleranciaCheckpoint_{0.5F};
+    float toleranciaDron_{0.5F};
 };

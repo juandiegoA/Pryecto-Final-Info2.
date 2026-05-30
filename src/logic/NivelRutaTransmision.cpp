@@ -2,6 +2,7 @@
 
 #include "logic/Checkpoint.h"
 #include "logic/Disco.h"
+#include "logic/Dron.h"
 #include "logic/Jugador.h"
 #include "logic/NodoCentralEnergia.h"
 #include "logic/Obstaculo.h"
@@ -29,10 +30,16 @@ void NivelRutaTransmision::actualizar(std::chrono::milliseconds intervalo) {
         }
     }
 
+    for (Dron* dron : drones) {
+        if (dron != nullptr) {
+            dron->actualizar(segundos);
+        }
+    }
+
     disco_->actualizar(segundos);
     temporizadorCheckpoint_.actualizar(intervalo);
 
-    if (verificarColisionConObstaculos()) {
+    if (verificarColisionConObstaculos() || verificarColisionConDrones()) {
         reiniciarDesdeUltimoCheckpoint();
         return;
     }
@@ -62,6 +69,10 @@ void NivelRutaTransmision::agregarCheckpoint(Checkpoint& checkpoint) {
     }
 }
 
+void NivelRutaTransmision::agregarDron(Dron& dron) {
+    drones.push_back(&dron);
+}
+
 void NivelRutaTransmision::agregarObstaculo(Obstaculo& obstaculo) {
     obstaculos.push_back(&obstaculo);
 }
@@ -75,6 +86,10 @@ void NivelRutaTransmision::establecerMetaFinal(NodoCentralEnergia& meta) noexcep
 
 const std::vector<Checkpoint*>& NivelRutaTransmision::obtenerCheckpoints() const noexcept {
     return checkpoints;
+}
+
+const std::vector<Dron*>& NivelRutaTransmision::obtenerDrones() const noexcept {
+    return drones;
 }
 
 const std::vector<Obstaculo*>& NivelRutaTransmision::obtenerObstaculos() const noexcept {
@@ -106,6 +121,20 @@ bool NivelRutaTransmision::verificarColisionConObstaculos() const noexcept {
 
     for (const Obstaculo* obstaculo : obstaculos) {
         if (obstaculo != nullptr && obstaculo->bloqueaAl(*disco_)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool NivelRutaTransmision::verificarColisionConDrones() const noexcept {
+    if (disco_ == nullptr) {
+        return false;
+    }
+
+    for (const Dron* dron : drones) {
+        if (dron != nullptr && dron->bloqueaDisco(*disco_, toleranciaDron_)) {
             return true;
         }
     }
