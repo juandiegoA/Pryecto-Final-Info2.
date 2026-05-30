@@ -25,10 +25,13 @@ public:
     void iniciar();
     void agregarDiscoEnemigo(DiscoEnemigo& disco);
     DiscoEnemigo& generarDiscoEnemigo(Posicion posicion);
+    void dispararDefensa(const Posicion& objetivo) noexcept;
     bool destruirDiscoEnemigo(std::size_t indice) noexcept;
     bool verificarImpactoJugador() const noexcept;
 
     const std::vector<DiscoEnemigo*>& obtenerDiscosEnemigos() const noexcept;
+    const Posicion& posicionProyectilDefensor() const noexcept;
+    bool proyectilDefensorActivo() const noexcept;
     std::size_t discosActivos() const noexcept;
     std::chrono::milliseconds tiempoTranscurrido() const noexcept;
     std::chrono::milliseconds tiempoRestante() const noexcept;
@@ -39,7 +42,10 @@ public:
 
 private:
     void moverDiscos(float segundos) noexcept;
+    void actualizarProyectilDefensor(float segundos) noexcept;
+    void verificarIntercepcionDefensiva() noexcept;
     void generarDiscosSiHaceFalta(std::chrono::milliseconds intervalo);
+    void desactivarDiscosEnemigos() noexcept;
     void declararVictoria() noexcept;
     void declararDerrota() noexcept;
 
@@ -49,10 +55,16 @@ private:
     Temporizador temporizadorNivel_{std::chrono::milliseconds{30000}};
     std::chrono::milliseconds tiempoDesdeUltimoDisparo_{0};
     std::chrono::milliseconds intervaloDisparo_{2200};
+    Posicion posicionProyectilDefensor_;
+    Posicion objetivoProyectilDefensor_;
+    Posicion direccionProyectilDefensor_;
     float velocidadDiscoEnemigo_{2.0F};
+    float velocidadProyectilDefensor_{8.0F};
     float toleranciaImpacto_{0.5F};
+    float toleranciaIntercepcion_{0.45F};
     std::size_t maxDiscosActivos_{5};
     std::size_t siguienteCarril_{0};
+    bool proyectilDefensorActivo_{false};
     bool enCurso_{false};
     bool victoria_{false};
     bool derrota_{false};

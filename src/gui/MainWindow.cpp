@@ -15,6 +15,7 @@
 
 #include <chrono>
 #include <limits>
+#include <vector>
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("Ultimate en TRON");
@@ -230,26 +231,7 @@ void MainWindow::defenderEn(const Posicion& objetivo) {
         return;
     }
 
-    const auto& discos = nivel->obtenerDiscosEnemigos();
-    std::size_t indiceCercano = discos.size();
-    float distanciaCercana = std::numeric_limits<float>::max();
-
-    for (std::size_t i = 0; i < discos.size(); ++i) {
-        const DiscoEnemigo* disco = discos[i];
-        if (disco == nullptr || disco->estaDestruido()) {
-            continue;
-        }
-
-        const float distancia = disco->posicion().distanciaA(objetivo);
-        if (distancia < distanciaCercana) {
-            distanciaCercana = distancia;
-            indiceCercano = i;
-        }
-    }
-
-    if (indiceCercano < discos.size() && distanciaCercana <= 0.95F) {
-        nivel->destruirDiscoEnemigo(indiceCercano);
-    }
+    nivel->dispararDefensa(objetivo);
 }
 
 void MainWindow::dibujarMenu(QPainter& painter) const {
@@ -366,13 +348,19 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
 
     const QPointF jugador = convertirDefensaAPantalla(juego_.jugador().posicion());
 
-    painter.setPen(QPen(QColor{45, 120, 170}, 2));
-    painter.drawLine(QPointF{width() / 2.0 - 260.0, height() - 40.0}, QPointF{width() / 2.0 - 32.0, 92.0});
-    painter.drawLine(QPointF{width() / 2.0 + 260.0, height() - 40.0}, QPointF{width() / 2.0 + 32.0, 92.0});
-    painter.setPen(QPen(QColor{25, 80, 120}, 1, Qt::DashLine));
-    for (int i = 1; i <= 4; ++i) {
-        const double y = height() - 82.0 - i * ((height() - 174.0) / 5.0);
-        painter.drawLine(QPointF{width() / 2.0 - 210.0 + i * 30.0, y}, QPointF{width() / 2.0 + 210.0 - i * 30.0, y});
+    const QPointF horizonte{width() / 2.0, 92.0};
+    painter.setPen(QPen(QColor{45, 130, 185}, 2));
+    for (double carril : {-3.5, -1.75, 0.0, 1.75, 3.5}) {
+        painter.drawLine(
+            QPointF{width() / 2.0 + carril * 72.0, height() - 40.0},
+            QPointF{horizonte.x() + carril * 9.0, horizonte.y()});
+    }
+    painter.setPen(QPen(QColor{35, 95, 145}, 1, Qt::DashLine));
+    for (int i = 1; i <= 6; ++i) {
+        const double t = i / 7.0;
+        const double y = height() - 82.0 - t * (height() - 174.0);
+        const double ancho = 260.0 * (1.0 - t) + 34.0 * t;
+        painter.drawLine(QPointF{width() / 2.0 - ancho, y}, QPointF{width() / 2.0 + ancho, y});
     }
 
     painter.setPen(Qt::NoPen);
@@ -381,7 +369,20 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
     painter.setBrush(QColor{40, 255, 210});
     painter.drawEllipse(jugador, 20.0, 20.0);
 
+    std::vector<const DiscoEnemigo*> discosOrdenados;
     for (const DiscoEnemigo* disco : nivel->obtenerDiscosEnemigos()) {
+        if (disco != nullptr) {
+            discosOrdenados.push_back(disco);
+        }
+    }
+    std::sort(
+        discosOrdenados.begin(),
+        discosOrdenados.end(),
+        [](const DiscoEnemigo* izquierdo, const DiscoEnemigo* derecho) {
+            return izquierdo->posicion().y() > derecho->posicion().y();
+        });
+
+    for (const DiscoEnemigo* disco : discosOrdenados) {
         if (disco == nullptr) {
             continue;
         }
@@ -400,6 +401,37 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
             painter.setBrush(QColor{255, 230, 170});
             painter.drawEllipse(centro, radio * 0.35, radio * 0.35);
         }
+    }
+
+    if (nivel->proyectilDefensorActivo()) {
+        const QPointF proyectil = convertirDefensaAPantalla(nivel->posicionProyectilDefensor());
+        const double escala = escalaDefensa(nivel->posicionProyectilDefensor());
+        painter.setPen(QPen(QColor{80, 255, 235}, 3));
+        painter.drawLine(jugador, proyectil);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor{110, 255, 245});
+        painter.drawEllipse(proyectil, 6.0 * escala, 6.0 * escala);
+    }
+
+    if (nivel->estaFinalizado()) {
+        painter.setBrush(QColor{5, 10, 20, 170});
+        painter.setPen(Qt::NoPen);
+        painter.drawRoundedRect(
+            QRectF{width() / 2.0 - 190.0, height() / 2.0 - 56.0, 380.0, 112.0},
+            12.0,
+            12.0);
+        painter.setPen(nivel->victoria() ? QColor{90, 255, 170} : QColor{255, 95, 105});
+        painter.setFont(QFont{"Arial", 24, QFont::Bold});
+        painter.drawText(
+            QRectF{width() / 2.0 - 180.0, height() / 2.0 - 38.0, 360.0, 40.0},
+            Qt::AlignCenter,
+            nivel->victoria() ? "VICTORIA" : "DERROTA");
+        painter.setPen(QColor{220, 240, 255});
+        painter.setFont(QFont{"Arial", 11});
+        painter.drawText(
+            QRectF{width() / 2.0 - 180.0, height() / 2.0 + 6.0, 360.0, 26.0},
+            Qt::AlignCenter,
+            "R para reiniciar | Esc para volver al menu");
     }
 }
 
