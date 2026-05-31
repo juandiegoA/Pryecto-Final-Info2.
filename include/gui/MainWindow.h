@@ -7,6 +7,10 @@
 #include <QPointF>
 #include <QRectF>
 
+#include <chrono>
+#include <cstddef>
+#include <string>
+
 class QPaintEvent;
 class QPainter;
 class QMouseEvent;
@@ -19,6 +23,7 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
 
@@ -40,6 +45,8 @@ private:
     void iniciarNivelDefensaNucleo();
     void volverAlMenu();
     void reiniciarNivelActual();
+    void actualizarEfectosVisuales(std::chrono::milliseconds intervalo);
+    void reiniciarEfectosVisuales();
     void lanzarDiscoHacia(const Posicion& destino);
     void defenderEn(const Posicion& objetivo);
     void dibujarMenu(QPainter& painter) const;
@@ -52,6 +59,16 @@ private:
     QTimer* temporizador_{nullptr};
     QElapsedTimer reloj_;
     Posicion ultimoObjetivo_;
+    Posicion posicionPulsoCheckpoint_;
+    Posicion posicionPulsoImpacto_;
+    QPointF posicionCursor_;
+    std::chrono::milliseconds pulsoCheckpoint_{0};
+    std::chrono::milliseconds pulsoImpacto_{0};
+    std::chrono::milliseconds pulsoFinal_{0};
+    std::string ultimoCheckpointActivado_;
+    std::size_t ultimasAmenazasActivas_{0};
     bool tieneObjetivo_{false};
+    bool cursorSobreVentana_{false};
+    bool finalRegistrado_{false};
     Pantalla pantalla_{Pantalla::Menu};
 };

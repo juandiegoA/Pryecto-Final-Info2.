@@ -15,7 +15,25 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <vector>
+
+namespace {
+constexpr auto duracionPulsoCheckpoint = std::chrono::milliseconds{620};
+constexpr auto duracionPulsoImpacto = std::chrono::milliseconds{460};
+constexpr auto duracionPulsoFinal = std::chrono::milliseconds{1200};
+
+double progresoPulso(std::chrono::milliseconds restante, std::chrono::milliseconds duracion) {
+    if (duracion.count() <= 0) {
+        return 1.0;
+    }
+
+    return 1.0 - std::clamp(
+        static_cast<double>(restante.count()) / static_cast<double>(duracion.count()),
+        0.0,
+        1.0);
+}
+}
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("Ultimate en TRON");
@@ -30,6 +48,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         const auto intervalo = std::chrono::milliseconds{reloj_.restart()};
         if (pantalla_ == Pantalla::Jugando) {
             juego_.actualizar(intervalo);
+            actualizarEfectosVisuales(intervalo);
         }
         update();
     });
@@ -55,6 +74,13 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
         QMainWindow::keyPressEvent(event);
         break;
     }
+}
+
+void MainWindow::mouseMoveEvent(QMouseEvent* event) {
+    posicionCursor_ = event->position();
+    cursorSobreVentana_ = true;
+    update();
+    QMainWindow::mouseMoveEvent(event);
 }
 
 void MainWindow::mousePressEvent(QMouseEvent* event) {
@@ -182,6 +208,7 @@ void MainWindow::iniciarNivelRutaTransmision() {
     juego_.cambiarANivelRutaTransmision();
     pantalla_ = Pantalla::Jugando;
     tieneObjetivo_ = false;
+    reiniciarEfectosVisuales();
     reloj_.restart();
     update();
 }
@@ -190,6 +217,7 @@ void MainWindow::iniciarNivelDefensaNucleo() {
     juego_.cambiarANivelDefensaNucleo();
     pantalla_ = Pantalla::Jugando;
     tieneObjetivo_ = false;
+    reiniciarEfectosVisuales();
     reloj_.restart();
     update();
 }
@@ -197,6 +225,7 @@ void MainWindow::iniciarNivelDefensaNucleo() {
 void MainWindow::volverAlMenu() {
     pantalla_ = Pantalla::Menu;
     tieneObjetivo_ = false;
+    reiniciarEfectosVisuales();
     update();
 }
 
@@ -207,8 +236,56 @@ void MainWindow::reiniciarNivelActual() {
 
     juego_.reiniciarNivelActivo();
     tieneObjetivo_ = false;
+    reiniciarEfectosVisuales();
     reloj_.restart();
     update();
+}
+
+void MainWindow::actualizarEfectosVisuales(std::chrono::milliseconds intervalo) {
+    const auto consumir = [intervalo](std::chrono::milliseconds& pulso) {
+        pulso = pulso > intervalo ? pulso - intervalo : std::chrono::milliseconds{0};
+    };
+
+    consumir(pulsoCheckpoint_);
+    consumir(pulsoImpacto_);
+    consumir(pulsoFinal_);
+
+    if (const auto* nivelRuta = dynamic_cast<const NivelRutaTransmision*>(juego_.nivelActual())) {
+        if (const Checkpoint* checkpoint = nivelRuta->checkpointActual()) {
+            if (checkpoint->id() != ultimoCheckpointActivado_) {
+                ultimoCheckpointActivado_ = checkpoint->id();
+                posicionPulsoCheckpoint_ = checkpoint->posicion();
+                pulsoCheckpoint_ = duracionPulsoCheckpoint;
+            }
+        }
+    }
+
+    if (const auto* nivelDefensa = dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual())) {
+        const std::size_t amenazasActuales = nivelDefensa->discosActivos();
+        if (amenazasActuales < ultimasAmenazasActivas_ && !nivelDefensa->estaFinalizado()) {
+            posicionPulsoImpacto_ = nivelDefensa->posicionProyectilDefensor();
+            pulsoImpacto_ = duracionPulsoImpacto;
+        }
+        ultimasAmenazasActivas_ = amenazasActuales;
+    }
+
+    if (juego_.nivelActivoFinalizado() && !finalRegistrado_) {
+        finalRegistrado_ = true;
+        pulsoFinal_ = duracionPulsoFinal;
+    }
+}
+
+void MainWindow::reiniciarEfectosVisuales() {
+    pulsoCheckpoint_ = std::chrono::milliseconds{0};
+    pulsoImpacto_ = std::chrono::milliseconds{0};
+    pulsoFinal_ = std::chrono::milliseconds{0};
+    ultimoCheckpointActivado_.clear();
+    if (const auto* nivelDefensa = dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual())) {
+        ultimasAmenazasActivas_ = nivelDefensa->discosActivos();
+    } else {
+        ultimasAmenazasActivas_ = 0;
+    }
+    finalRegistrado_ = false;
 }
 
 void MainWindow::lanzarDiscoHacia(const Posicion& destino) {
@@ -236,15 +313,25 @@ void MainWindow::defenderEn(const Posicion& objetivo) {
 }
 
 void MainWindow::dibujarMenu(QPainter& painter) const {
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor{5, 12, 24, 150});
+    painter.drawRoundedRect(
+        QRectF{width() / 2.0 - 250.0, 64.0, 500.0, 340.0},
+        18.0,
+        18.0);
+
     painter.setPen(QColor{220, 245, 255});
-    painter.setFont(QFont{"Arial", 26, QFont::Bold});
-    painter.drawText(QRectF{0.0, 80.0, static_cast<double>(width()), 50.0}, Qt::AlignCenter, "Ultimate en TRON");
+    painter.setFont(QFont{"Arial", 32, QFont::Bold});
+    painter.drawText(QRectF{0.0, 76.0, static_cast<double>(width()), 54.0}, Qt::AlignCenter, "ULTIMATE EN TRON");
+    painter.setPen(QPen(QColor{80, 240, 255}, 2));
+    painter.drawLine(QPointF{width() / 2.0 - 150.0, 132.0}, QPointF{width() / 2.0 + 150.0, 132.0});
 
     painter.setFont(QFont{"Arial", 12});
+    painter.setPen(QColor{170, 220, 235});
     painter.drawText(
-        QRectF{0.0, 132.0, static_cast<double>(width()), 30.0},
+        QRectF{0.0, 148.0, static_cast<double>(width()), 30.0},
         Qt::AlignCenter,
-        "Selecciona un nivel para jugar");
+        "Selecciona una simulacion de combate");
 
     const QList<QPair<QRectF, QString>> botones{
         {botonNivel1(), "Jugar Nivel 1 - Ruta de Transmision"},
@@ -252,11 +339,17 @@ void MainWindow::dibujarMenu(QPainter& painter) const {
         {botonSalir(), "Salir"}};
 
     for (const auto& boton : botones) {
-        painter.setPen(QPen(QColor{80, 220, 255}, 2));
-        painter.setBrush(QColor{18, 35, 58});
+        const bool hover = cursorSobreVentana_ && boton.first.contains(posicionCursor_);
+        painter.setPen(QPen(hover ? QColor{140, 255, 255} : QColor{80, 220, 255}, hover ? 3 : 2));
+        painter.setBrush(hover ? QColor{24, 58, 86} : QColor{18, 35, 58});
         painter.drawRoundedRect(boton.first, 8.0, 8.0);
 
-        painter.setPen(QColor{235, 250, 255});
+        if (hover) {
+            painter.setPen(QPen(QColor{130, 255, 250, 180}, 1));
+            painter.drawRoundedRect(boton.first.adjusted(5.0, 5.0, -5.0, -5.0), 6.0, 6.0);
+        }
+
+        painter.setPen(hover ? QColor{255, 255, 255} : QColor{235, 250, 255});
         painter.setFont(QFont{"Arial", 12, QFont::Bold});
         painter.drawText(boton.first, Qt::AlignCenter, boton.second);
     }
@@ -283,10 +376,20 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
         }
 
         const QPointF centro = convertirAPantalla(checkpoint->posicion());
+        if (pulsoCheckpoint_.count() > 0
+            && checkpoint->posicion().distanciaA(posicionPulsoCheckpoint_) <= 0.01F) {
+            const double progreso = progresoPulso(pulsoCheckpoint_, duracionPulsoCheckpoint);
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(QColor{100, 255, 190, static_cast<int>(190 * (1.0 - progreso))}, 3));
+            painter.drawEllipse(centro, 16.0 + progreso * 28.0, 16.0 + progreso * 28.0);
+            painter.setPen(Qt::NoPen);
+        }
         painter.setBrush(checkpoint->estaActivado()
             ? QColor{70, 230, 140}
             : QColor{240, 200, 70});
         painter.drawEllipse(centro, 12.0, 12.0);
+        painter.setBrush(QColor{245, 255, 255});
+        painter.drawEllipse(centro, 4.0, 4.0);
     }
 
     if (const NodoCentralEnergia* meta = nivel->metaFinal()) {
@@ -332,13 +435,19 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
     }
 
     painter.setBrush(QColor{40, 255, 210});
-    painter.drawEllipse(jugador, 14.0, 14.0);
+    painter.drawEllipse(jugador, 16.0, 16.0);
+    painter.setBrush(QColor{220, 255, 245});
+    painter.drawEllipse(jugador, 5.0, 5.0);
 
     const QPointF disco = convertirAPantalla(juego_.discoJugador().posicion());
     painter.setBrush(juego_.discoJugador().estaActivo()
         ? QColor{255, 255, 255}
         : QColor{130, 140, 150});
-    painter.drawEllipse(disco, 7.0, 7.0);
+    painter.drawEllipse(disco, 8.0, 8.0);
+    if (juego_.discoJugador().estaActivo()) {
+        painter.setBrush(QColor{80, 240, 255, 160});
+        painter.drawEllipse(disco, 14.0, 14.0);
+    }
 }
 
 void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
@@ -369,6 +478,8 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
     painter.drawEllipse(jugador, 58.0, 22.0);
     painter.setBrush(QColor{40, 255, 210});
     painter.drawEllipse(jugador, 20.0, 20.0);
+    painter.setBrush(QColor{230, 255, 245});
+    painter.drawEllipse(jugador, 6.0, 6.0);
 
     std::vector<const DiscoEnemigo*> discosOrdenados;
     for (const DiscoEnemigo* disco : nivel->obtenerDiscosEnemigos()) {
@@ -399,6 +510,8 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
             : QColor{255, 80, 90});
         painter.drawEllipse(centro, radio, radio);
         if (!disco->estaDestruido()) {
+            painter.setBrush(QColor{255, 70, 80, 90});
+            painter.drawEllipse(centro, radio * 1.65, radio * 1.65);
             painter.setBrush(QColor{255, 230, 170});
             painter.drawEllipse(centro, radio * 0.35, radio * 0.35);
         }
@@ -412,18 +525,31 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(QColor{110, 255, 245});
         painter.drawEllipse(proyectil, 6.0 * escala, 6.0 * escala);
+        painter.setBrush(QColor{110, 255, 245, 95});
+        painter.drawEllipse(proyectil, 13.0 * escala, 13.0 * escala);
+    }
+
+    if (pulsoImpacto_.count() > 0) {
+        const double progreso = progresoPulso(pulsoImpacto_, duracionPulsoImpacto);
+        const QPointF centro = convertirDefensaAPantalla(posicionPulsoImpacto_);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(QColor{120, 255, 235, static_cast<int>(220 * (1.0 - progreso))}, 3));
+        painter.drawEllipse(centro, 10.0 + progreso * 36.0, 10.0 + progreso * 36.0);
+        painter.setPen(Qt::NoPen);
     }
 
 }
 
 void MainWindow::dibujarEstado(QPainter& painter) const {
     const QRectF panel{18.0, 18.0, 310.0, 154.0};
-    painter.setPen(QPen(QColor{80, 220, 255}, 1));
+    const bool defensa = dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual()) != nullptr;
+    const QColor acentoHud = defensa ? QColor{255, 95, 140} : QColor{80, 240, 255};
+    painter.setPen(QPen(acentoHud, 1));
     painter.setBrush(QColor{7, 18, 32, 210});
     painter.drawRoundedRect(panel, 10.0, 10.0);
 
-    painter.setPen(QColor{110, 245, 255});
-    painter.setFont(QFont{"Arial", 15, QFont::Bold});
+    painter.setPen(acentoHud);
+    painter.setFont(QFont{"Arial", 16, QFont::Bold});
     painter.drawText(QRectF{34.0, 28.0, 280.0, 24.0}, Qt::AlignLeft, "ULTIMATE EN TRON");
 
     QString nivelTexto = "Nivel: desconocido";
@@ -485,13 +611,17 @@ void MainWindow::dibujarOverlayFinal(QPainter& painter) const {
         ? "Sistema estabilizado. Ruta completada."
         : "Conexion perdida. Reintenta la secuencia.";
 
+    const double pulso = pulsoFinal_.count() > 0
+        ? std::sin(progresoPulso(pulsoFinal_, duracionPulsoFinal) * 3.14159265358979323846)
+        : 0.0;
+
     painter.setBrush(QColor{3, 8, 18, 188});
     painter.setPen(Qt::NoPen);
     painter.drawRect(rect());
 
     const QRectF tarjeta{width() / 2.0 - 230.0, height() / 2.0 - 86.0, 460.0, 172.0};
     painter.setBrush(QColor{7, 18, 32, 235});
-    painter.setPen(QPen(acento, 2));
+    painter.setPen(QPen(acento, 2 + pulso * 2));
     painter.drawRoundedRect(tarjeta, 14.0, 14.0);
 
     painter.setPen(acento);
