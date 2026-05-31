@@ -11,7 +11,9 @@
 #include <QPaintEvent>
 #include <QPolygonF>
 #include <QString>
+#include <QSoundEffect>
 #include <QTimer>
+#include <QUrl>
 
 #include <algorithm>
 #include <chrono>
@@ -53,6 +55,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     resize(960, 540);
     setMinimumSize(800, 450);
     setMouseTracking(true);
+    inicializarSonido();
 
     reloj_.start();
     temporizador_ = new QTimer(this);
@@ -71,6 +74,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         update();
     });
     temporizador_->start();
+    actualizarMusicaFondo();
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event) {
@@ -251,6 +255,7 @@ void MainWindow::iniciarNivelRutaTransmision() {
         tieneObjetivo_ = false;
         reiniciarEfectosVisuales();
         reloj_.restart();
+        actualizarMusicaFondo();
         update();
     } catch (const std::exception& error) {
         registrarError(error);
@@ -265,6 +270,7 @@ void MainWindow::iniciarNivelDefensaNucleo() {
         tieneObjetivo_ = false;
         reiniciarEfectosVisuales();
         reloj_.restart();
+        actualizarMusicaFondo();
         update();
     } catch (const std::exception& error) {
         registrarError(error);
@@ -275,6 +281,7 @@ void MainWindow::volverAlMenu() {
     pantalla_ = Pantalla::Menu;
     tieneObjetivo_ = false;
     reiniciarEfectosVisuales();
+    actualizarMusicaFondo();
     update();
 }
 
@@ -310,6 +317,7 @@ void MainWindow::actualizarEfectosVisuales(std::chrono::milliseconds intervalo) 
                 ultimoCheckpointActivado_ = checkpoint->id();
                 posicionPulsoCheckpoint_ = checkpoint->posicion();
                 pulsoCheckpoint_ = duracionPulsoCheckpoint;
+                reproducirSonidoCheckpoint();
             }
         }
     }
@@ -319,6 +327,7 @@ void MainWindow::actualizarEfectosVisuales(std::chrono::milliseconds intervalo) 
         if (amenazasActuales < ultimasAmenazasActivas_ && !nivelDefensa->estaFinalizado()) {
             posicionPulsoImpacto_ = nivelDefensa->posicionProyectilDefensor();
             pulsoImpacto_ = duracionPulsoImpacto;
+            reproducirSonidoImpacto();
         }
         ultimasAmenazasActivas_ = amenazasActuales;
     }
@@ -326,6 +335,11 @@ void MainWindow::actualizarEfectosVisuales(std::chrono::milliseconds intervalo) 
     if (juego_.nivelActivoFinalizado() && !finalRegistrado_) {
         finalRegistrado_ = true;
         pulsoFinal_ = duracionPulsoFinal;
+        if (juego_.nivelActivoVictoria()) {
+            reproducirSonidoVictoria();
+        } else if (juego_.nivelActivoDerrota()) {
+            reproducirSonidoDerrota();
+        }
     }
 }
 
@@ -347,6 +361,67 @@ void MainWindow::registrarError(const std::exception& error) {
     tieneObjetivo_ = false;
     reiniciarEfectosVisuales();
     update();
+}
+
+void MainWindow::inicializarSonido() {
+    musicaMenu_ = new QSoundEffect(this);
+    musicaMenu_->setSource(QUrl{"qrc:/audio/menu_loop.wav"});
+    musicaMenu_->setLoopCount(QSoundEffect::Infinite);
+    musicaMenu_->setVolume(0.18F);
+
+    sonidoCheckpoint_ = new QSoundEffect(this);
+    sonidoCheckpoint_->setSource(QUrl{"qrc:/audio/checkpoint.wav"});
+    sonidoCheckpoint_->setVolume(0.55F);
+
+    sonidoImpacto_ = new QSoundEffect(this);
+    sonidoImpacto_->setSource(QUrl{"qrc:/audio/destroy_enemy.wav"});
+    sonidoImpacto_->setVolume(0.6F);
+
+    sonidoVictoria_ = new QSoundEffect(this);
+    sonidoVictoria_->setSource(QUrl{"qrc:/audio/victory.wav"});
+    sonidoVictoria_->setVolume(0.65F);
+
+    sonidoDerrota_ = new QSoundEffect(this);
+    sonidoDerrota_->setSource(QUrl{"qrc:/audio/defeat.wav"});
+    sonidoDerrota_->setVolume(0.65F);
+}
+
+void MainWindow::reproducirSonidoCheckpoint() {
+    if (sonidoCheckpoint_ != nullptr) {
+        sonidoCheckpoint_->play();
+    }
+}
+
+void MainWindow::reproducirSonidoImpacto() {
+    if (sonidoImpacto_ != nullptr) {
+        sonidoImpacto_->play();
+    }
+}
+
+void MainWindow::reproducirSonidoVictoria() {
+    if (sonidoVictoria_ != nullptr) {
+        sonidoVictoria_->play();
+    }
+}
+
+void MainWindow::reproducirSonidoDerrota() {
+    if (sonidoDerrota_ != nullptr) {
+        sonidoDerrota_->play();
+    }
+}
+
+void MainWindow::actualizarMusicaFondo() {
+    if (musicaMenu_ == nullptr) {
+        return;
+    }
+
+    if (pantalla_ == Pantalla::Menu) {
+        if (!musicaMenu_->isPlaying()) {
+            musicaMenu_->play();
+        }
+    } else {
+        musicaMenu_->stop();
+    }
 }
 
 void MainWindow::lanzarDiscoHacia(const Posicion& destino) {

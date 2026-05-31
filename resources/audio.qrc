@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/audio">
+        <file alias="menu_loop.wav">../assets/audio/menu_loop.wav</file>
+        <file alias="checkpoint.wav">../assets/audio/checkpoint.wav</file>
+        <file alias="destroy_enemy.wav">../assets/audio/destroy_enemy.wav</file>
+        <file alias="victory.wav">../assets/audio/victory.wav</file>
+        <file alias="defeat.wav">../assets/audio/defeat.wav</file>
+    </qresource>
+</RCC>

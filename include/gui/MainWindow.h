@@ -17,6 +17,7 @@ class QPaintEvent;
 class QPainter;
 class QMouseEvent;
 class QKeyEvent;
+class QSoundEffect;
 class QTimer;
 
 class MainWindow final : public QMainWindow {
@@ -53,6 +54,12 @@ private:
     void actualizarEfectosVisuales(std::chrono::milliseconds intervalo);
     void reiniciarEfectosVisuales();
     void registrarError(const std::exception& error);
+    void inicializarSonido();
+    void reproducirSonidoCheckpoint();
+    void reproducirSonidoImpacto();
+    void reproducirSonidoVictoria();
+    void reproducirSonidoDerrota();
+    void actualizarMusicaFondo();
     void lanzarDiscoHacia(const Posicion& destino);
     void defenderEn(const Posicion& objetivo);
     void dibujarMenu(QPainter& painter) const;
@@ -63,6 +70,11 @@ private:
 
     Juego juego_;
     QTimer* temporizador_{nullptr};
+    QSoundEffect* musicaMenu_{nullptr};
+    QSoundEffect* sonidoCheckpoint_{nullptr};
+    QSoundEffect* sonidoImpacto_{nullptr};
+    QSoundEffect* sonidoVictoria_{nullptr};
+    QSoundEffect* sonidoDerrota_{nullptr};
     QElapsedTimer reloj_;
     Posicion ultimoObjetivo_;
     Posicion posicionPulsoCheckpoint_;

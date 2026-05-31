@@ -5,8 +5,9 @@ project(UltimateEnTRON VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Multimedia)
 
 add_library(tron_logic
     src/logic/AgenteInteligente.cpp
@@ -32,12 +33,12 @@ target_include_directories(tron_logic PUBLIC include)
 add_executable(ultimate_en_tron
     src/main.cpp
     src/gui/MainWindow.cpp
+    resources/audio.qrc
 )
 
 target_include_directories(ultimate_en_tron PRIVATE include)
-target_link_libraries(ultimate_en_tron PRIVATE tron_logic Qt6::Widgets)
+target_link_libraries(ultimate_en_tron PRIVATE tron_logic Qt6::Widgets Qt6::Multimedia)
 
 if(WIN32)
     set_target_properties(ultimate_en_tron PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
-
