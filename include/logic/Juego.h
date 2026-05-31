@@ -1,11 +1,11 @@
 #pragma once
 
 #include "logic/Checkpoint.h"
+#include "logic/DificultadDefensa.h"
 #include "logic/Disco.h"
 #include "logic/DiscoEnemigo.h"
 #include "logic/Dron.h"
 #include "logic/Jugador.h"
-#include "logic/NivelDefensaNucleo.h"
 #include "logic/NodoCentralEnergia.h"
 #include "logic/Obstaculo.h"
 

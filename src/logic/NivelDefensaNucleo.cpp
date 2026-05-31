@@ -4,12 +4,16 @@
 
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 #include <utility>
 
 NivelDefensaNucleo::NivelDefensaNucleo(
     Jugador& jugador,
     std::chrono::milliseconds tiempoObjetivo)
     : jugador_(&jugador), temporizadorNivel_(tiempoObjetivo) {
+    if (tiempoObjetivo.count() <= 0) {
+        throw std::invalid_argument{"NivelDefensaNucleo requiere un tiempo objetivo positivo"};
+    }
     configurarDificultad(dificultad_);
 }
 
@@ -71,6 +75,10 @@ void NivelDefensaNucleo::configurarJugador(Jugador& jugador) noexcept {
 
 void NivelDefensaNucleo::configurarTiempoObjetivo(
     std::chrono::milliseconds tiempoObjetivo) {
+    if (tiempoObjetivo.count() <= 0) {
+        throw std::invalid_argument{"El tiempo objetivo de NivelDefensaNucleo debe ser positivo"};
+    }
+
     temporizadorNivel_ = Temporizador{std::max(tiempoObjetivo, std::chrono::milliseconds{0})};
     enCurso_ = false;
     victoria_ = false;
@@ -78,6 +86,16 @@ void NivelDefensaNucleo::configurarTiempoObjetivo(
 }
 
 void NivelDefensaNucleo::iniciar() {
+    if (jugador_ == nullptr) {
+        throw std::logic_error{"No se puede iniciar NivelDefensaNucleo sin jugador configurado"};
+    }
+    if (temporizadorNivel_.duracion().count() <= 0) {
+        throw std::logic_error{"No se puede iniciar NivelDefensaNucleo sin tiempo objetivo valido"};
+    }
+    if (carrilesAparicion_.empty()) {
+        throw std::logic_error{"No se puede iniciar NivelDefensaNucleo sin carriles de aparicion"};
+    }
+
     temporizadorNivel_.iniciar();
     tiempoDesdeUltimoDisparo_ = intervaloDisparo_;
     tiempoDesdeUltimoDisparoDefensor_ = intervaloProyectilDefensor_;
@@ -151,6 +169,28 @@ bool NivelDefensaNucleo::verificarImpactoJugador() const noexcept {
 
 const std::vector<DiscoEnemigo*>& NivelDefensaNucleo::obtenerDiscosEnemigos() const noexcept {
     return discosEnemigos;
+}
+
+DiscoEnemigo& NivelDefensaNucleo::discoEnemigoEn(std::size_t indice) {
+    if (indice >= discosEnemigos.size()) {
+        throw std::out_of_range{"Indice de disco enemigo fuera de rango"};
+    }
+    if (discosEnemigos[indice] == nullptr) {
+        throw std::logic_error{"Disco enemigo no configurado en NivelDefensaNucleo"};
+    }
+
+    return *discosEnemigos[indice];
+}
+
+const DiscoEnemigo& NivelDefensaNucleo::discoEnemigoEn(std::size_t indice) const {
+    if (indice >= discosEnemigos.size()) {
+        throw std::out_of_range{"Indice de disco enemigo fuera de rango"};
+    }
+    if (discosEnemigos[indice] == nullptr) {
+        throw std::logic_error{"Disco enemigo no configurado en NivelDefensaNucleo"};
+    }
+
+    return *discosEnemigos[indice];
 }
 
 const Posicion& NivelDefensaNucleo::posicionProyectilDefensor() const noexcept {
@@ -246,7 +286,6 @@ NivelDefensaNucleo::ConfiguracionDificultad NivelDefensaNucleo::crearConfiguraci
             0.34F,
             6};
     case DificultadDefensa::Medio:
-    default:
         return ConfiguracionDificultad{
             {
                 Posicion{-3.5F, 9.5F},
@@ -262,6 +301,8 @@ NivelDefensaNucleo::ConfiguracionDificultad NivelDefensaNucleo::crearConfiguraci
             0.45F,
             5};
     }
+
+    throw std::invalid_argument{"Dificultad de NivelDefensaNucleo no reconocida"};
 }
 
 void NivelDefensaNucleo::actualizarProyectilDefensor(float segundos) noexcept {

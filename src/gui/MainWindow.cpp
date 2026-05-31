@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <exception>
 #include <vector>
 
 namespace {
@@ -59,8 +60,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(temporizador_, &QTimer::timeout, this, [this]() {
         const auto intervalo = std::chrono::milliseconds{reloj_.restart()};
         if (pantalla_ == Pantalla::Jugando) {
-            juego_.actualizar(intervalo);
-            actualizarEfectosVisuales(intervalo);
+            try {
+                juego_.actualizar(intervalo);
+                actualizarEfectosVisuales(intervalo);
+            } catch (const std::exception& error) {
+                registrarError(error);
+                pantalla_ = Pantalla::Menu;
+            }
         }
         update();
     });
@@ -238,21 +244,31 @@ QRectF MainWindow::botonDificultadDificil() const {
 }
 
 void MainWindow::iniciarNivelRutaTransmision() {
-    juego_.cambiarANivelRutaTransmision();
-    pantalla_ = Pantalla::Jugando;
-    tieneObjetivo_ = false;
-    reiniciarEfectosVisuales();
-    reloj_.restart();
-    update();
+    try {
+        juego_.cambiarANivelRutaTransmision();
+        pantalla_ = Pantalla::Jugando;
+        mensajeError_.clear();
+        tieneObjetivo_ = false;
+        reiniciarEfectosVisuales();
+        reloj_.restart();
+        update();
+    } catch (const std::exception& error) {
+        registrarError(error);
+    }
 }
 
 void MainWindow::iniciarNivelDefensaNucleo() {
-    juego_.cambiarANivelDefensaNucleo();
-    pantalla_ = Pantalla::Jugando;
-    tieneObjetivo_ = false;
-    reiniciarEfectosVisuales();
-    reloj_.restart();
-    update();
+    try {
+        juego_.cambiarANivelDefensaNucleo();
+        pantalla_ = Pantalla::Jugando;
+        mensajeError_.clear();
+        tieneObjetivo_ = false;
+        reiniciarEfectosVisuales();
+        reloj_.restart();
+        update();
+    } catch (const std::exception& error) {
+        registrarError(error);
+    }
 }
 
 void MainWindow::volverAlMenu() {
@@ -267,11 +283,16 @@ void MainWindow::reiniciarNivelActual() {
         return;
     }
 
-    juego_.reiniciarNivelActivo();
-    tieneObjetivo_ = false;
-    reiniciarEfectosVisuales();
-    reloj_.restart();
-    update();
+    try {
+        juego_.reiniciarNivelActivo();
+        mensajeError_.clear();
+        tieneObjetivo_ = false;
+        reiniciarEfectosVisuales();
+        reloj_.restart();
+        update();
+    } catch (const std::exception& error) {
+        registrarError(error);
+    }
 }
 
 void MainWindow::actualizarEfectosVisuales(std::chrono::milliseconds intervalo) {
@@ -319,6 +340,13 @@ void MainWindow::reiniciarEfectosVisuales() {
         ultimasAmenazasActivas_ = 0;
     }
     finalRegistrado_ = false;
+}
+
+void MainWindow::registrarError(const std::exception& error) {
+    mensajeError_ = QString::fromLocal8Bit(error.what());
+    tieneObjetivo_ = false;
+    reiniciarEfectosVisuales();
+    update();
 }
 
 void MainWindow::lanzarDiscoHacia(const Posicion& destino) {
@@ -417,6 +445,15 @@ void MainWindow::dibujarMenu(QPainter& painter) const {
         QRectF{0.0, height() - 42.0, static_cast<double>(width()), 24.0},
         Qt::AlignCenter,
         "Atajos: 1 Nivel 1 | 2 Nivel 2 | Esc/M Menu | R Reiniciar");
+
+    if (!mensajeError_.isEmpty()) {
+        painter.setPen(QColor{255, 120, 130});
+        painter.setFont(QFont{"Arial", 10, QFont::Bold});
+        painter.drawText(
+            QRectF{width() / 2.0 - 260.0, height() - 72.0, 520.0, 22.0},
+            Qt::AlignCenter,
+            QString{"Error de configuracion: %1"}.arg(mensajeError_));
+    }
 }
 
 void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "logic/DificultadDefensa.h"
 #include "logic/DiscoEnemigo.h"
 #include "logic/Nivel.h"
 #include "logic/Temporizador.h"
@@ -10,12 +11,6 @@
 #include <vector>
 
 class Jugador;
-
-enum class DificultadDefensa {
-    Facil,
-    Medio,
-    Dificil
-};
 
 class NivelDefensaNucleo final : public Nivel {
 public:
@@ -37,6 +32,8 @@ public:
     bool verificarImpactoJugador() const noexcept;
 
     const std::vector<DiscoEnemigo*>& obtenerDiscosEnemigos() const noexcept;
+    DiscoEnemigo& discoEnemigoEn(std::size_t indice);
+    const DiscoEnemigo& discoEnemigoEn(std::size_t indice) const;
     const Posicion& posicionProyectilDefensor() const noexcept;
     bool proyectilDefensorActivo() const noexcept;
     DificultadDefensa dificultad() const noexcept;

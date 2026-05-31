@@ -6,9 +6,11 @@
 #include <QMainWindow>
 #include <QPointF>
 #include <QRectF>
+#include <QString>
 
 #include <chrono>
 #include <cstddef>
+#include <exception>
 #include <string>
 
 class QPaintEvent;
@@ -50,6 +52,7 @@ private:
     void reiniciarNivelActual();
     void actualizarEfectosVisuales(std::chrono::milliseconds intervalo);
     void reiniciarEfectosVisuales();
+    void registrarError(const std::exception& error);
     void lanzarDiscoHacia(const Posicion& destino);
     void defenderEn(const Posicion& objetivo);
     void dibujarMenu(QPainter& painter) const;
@@ -65,6 +68,7 @@ private:
     Posicion posicionPulsoCheckpoint_;
     Posicion posicionPulsoImpacto_;
     QPointF posicionCursor_;
+    QString mensajeError_;
     std::chrono::milliseconds pulsoCheckpoint_{0};
     std::chrono::milliseconds pulsoImpacto_{0};
     std::chrono::milliseconds pulsoFinal_{0};

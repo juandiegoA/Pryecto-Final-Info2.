@@ -7,6 +7,7 @@
 #include "logic/NivelRutaTransmision.h"
 
 #include <chrono>
+#include <stdexcept>
 #include <utility>
 
 using namespace std::chrono_literals;
@@ -34,6 +35,10 @@ const Disco& Juego::discoJugador() const noexcept {
 }
 
 void Juego::establecerNivel(std::unique_ptr<Nivel> nivel) {
+    if (nivel == nullptr) {
+        throw std::invalid_argument{"Juego no puede establecer un nivel activo nulo"};
+    }
+
     nivelActual_ = std::move(nivel);
     tipoNivelActivo_ = TipoNivelActivo::Ninguno;
 }
