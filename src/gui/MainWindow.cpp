@@ -22,6 +22,37 @@
 #include <vector>
 
 namespace {
+constexpr int anchoInicialVentana = 960;
+constexpr int altoInicialVentana = 540;
+constexpr int anchoMinimoVentana = 800;
+constexpr int altoMinimoVentana = 450;
+constexpr int intervaloActualizacionMs = 16;
+constexpr int separacionGrid = 40;
+
+constexpr double escalaRuta = 55.0;
+constexpr double origenRutaX = 80.0;
+constexpr double profundidadMaximaDefensa = 10.5;
+constexpr double margenInferiorDefensa = 82.0;
+constexpr double horizonteDefensaY = 92.0;
+constexpr double anchoCarrilDefensa = 54.0;
+constexpr double variacionCarrilDefensa = 18.0;
+
+constexpr double anchoBotonMenu = 280.0;
+constexpr double altoBotonMenu = 42.0;
+constexpr double anchoBotonDificultad = 84.0;
+constexpr double altoBotonDificultad = 34.0;
+
+constexpr float volumenMusicaMenu = 0.18F;
+constexpr float volumenCheckpoint = 0.55F;
+constexpr float volumenImpacto = 0.6F;
+constexpr float volumenResultado = 0.65F;
+
+constexpr const char* audioMenu = "qrc:/audio/menu_loop.wav";
+constexpr const char* audioCheckpoint = "qrc:/audio/checkpoint.wav";
+constexpr const char* audioImpacto = "qrc:/audio/destroy_enemy.wav";
+constexpr const char* audioVictoria = "qrc:/audio/victory.wav";
+constexpr const char* audioDerrota = "qrc:/audio/defeat.wav";
+
 constexpr auto duracionPulsoCheckpoint = std::chrono::milliseconds{620};
 constexpr auto duracionPulsoImpacto = std::chrono::milliseconds{460};
 constexpr auto duracionPulsoFinal = std::chrono::milliseconds{1200};
@@ -48,28 +79,33 @@ QString textoDificultad(DificultadDefensa dificultad) {
         return "Medio";
     }
 }
+
+QSoundEffect* crearEfectoSonido(QObject* parent, const char* recurso, float volumen, int repeticiones = 1) {
+    auto* sonido = new QSoundEffect(parent);
+    sonido->setSource(QUrl{recurso});
+    sonido->setLoopCount(repeticiones);
+    sonido->setVolume(volumen);
+    return sonido;
+}
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("Ultimate en TRON");
-    resize(960, 540);
-    setMinimumSize(800, 450);
+    resize(anchoInicialVentana, altoInicialVentana);
+    setMinimumSize(anchoMinimoVentana, altoMinimoVentana);
     setMouseTracking(true);
     inicializarSonido();
 
     reloj_.start();
     temporizador_ = new QTimer(this);
-    temporizador_->setInterval(16);
+    temporizador_->setInterval(intervaloActualizacionMs);
     connect(temporizador_, &QTimer::timeout, this, [this]() {
         const auto intervalo = std::chrono::milliseconds{reloj_.restart()};
         if (pantalla_ == Pantalla::Jugando) {
-            try {
+            ejecutarAccionSegura([this, intervalo]() {
                 juego_.actualizar(intervalo);
                 actualizarEfectosVisuales(intervalo);
-            } catch (const std::exception& error) {
-                registrarError(error);
-                pantalla_ = Pantalla::Menu;
-            }
+            });
         }
         update();
     });
@@ -112,37 +148,12 @@ void MainWindow::mousePressEvent(QMouseEvent* event) {
     }
 
     if (pantalla_ == Pantalla::Menu) {
-        const QPointF punto = event->position();
-        if (botonNivel1().contains(punto)) {
-            iniciarNivelRutaTransmision();
-        } else if (botonNivel2().contains(punto)) {
-            iniciarNivelDefensaNucleo();
-        } else if (botonDificultadFacil().contains(punto)) {
-            juego_.establecerDificultadDefensa(DificultadDefensa::Facil);
-            update();
-        } else if (botonDificultadMedio().contains(punto)) {
-            juego_.establecerDificultadDefensa(DificultadDefensa::Medio);
-            update();
-        } else if (botonDificultadDificil().contains(punto)) {
-            juego_.establecerDificultadDefensa(DificultadDefensa::Dificil);
-            update();
-        } else if (botonSalir().contains(punto)) {
-            close();
-        }
+        manejarClickMenu(event->position());
         QMainWindow::mousePressEvent(event);
         return;
     }
 
-    if (!juego_.nivelActivoFinalizado()) {
-        if (dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual()) != nullptr) {
-            const Posicion objetivo = convertirDefensaALogica(event->position());
-            defenderEn(objetivo);
-        } else {
-            const Posicion objetivo = convertirALogica(event->position());
-            lanzarDiscoHacia(objetivo);
-        }
-        update();
-    }
+    manejarClickJuego(event->position());
 
     QMainWindow::mousePressEvent(event);
 }
@@ -152,15 +163,7 @@ void MainWindow::paintEvent(QPaintEvent* event) {
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    painter.fillRect(rect(), QColor{12, 16, 28});
-
-    painter.setPen(QPen(QColor{30, 180, 220}, 1));
-    for (int x = 40; x < width(); x += 40) {
-        painter.drawLine(x, 0, x, height());
-    }
-    for (int y = 40; y < height(); y += 40) {
-        painter.drawLine(0, y, width(), y);
-    }
+    dibujarFondo(painter);
 
     if (pantalla_ == Pantalla::Menu) {
         dibujarMenu(painter);
@@ -174,81 +177,84 @@ void MainWindow::paintEvent(QPaintEvent* event) {
 }
 
 QPointF MainWindow::convertirAPantalla(const Posicion& posicion) const {
-    constexpr double escala = 55.0;
-    const double origenX = 80.0;
     const double origenY = height() / 2.0;
     return QPointF{
-        origenX + posicion.x() * escala,
-        origenY - posicion.y() * escala};
+        origenRutaX + posicion.x() * escalaRuta,
+        origenY - posicion.y() * escalaRuta};
 }
 
 Posicion MainWindow::convertirALogica(const QPointF& punto) const {
-    constexpr double escala = 55.0;
-    const double origenX = 80.0;
     const double origenY = height() / 2.0;
     return Posicion{
-        static_cast<float>((punto.x() - origenX) / escala),
-        static_cast<float>((origenY - punto.y()) / escala)};
+        static_cast<float>((punto.x() - origenRutaX) / escalaRuta),
+        static_cast<float>((origenY - punto.y()) / escalaRuta)};
 }
 
 QPointF MainWindow::convertirDefensaAPantalla(const Posicion& posicion) const {
-    constexpr double profundidadMaxima = 10.5;
     const double centroX = width() / 2.0;
-    const double fondoY = height() - 82.0;
-    const double horizonteY = 92.0;
-    const double t = std::clamp(static_cast<double>(posicion.y()) / profundidadMaxima, 0.0, 1.0);
-    const double ancho = 54.0 + 18.0 * (1.0 - t);
+    const double fondoY = height() - margenInferiorDefensa;
+    const double t = std::clamp(static_cast<double>(posicion.y()) / profundidadMaximaDefensa, 0.0, 1.0);
+    const double ancho = anchoCarrilDefensa + variacionCarrilDefensa * (1.0 - t);
 
     return QPointF{
         centroX + posicion.x() * ancho,
-        fondoY - (fondoY - horizonteY) * t};
+        fondoY - (fondoY - horizonteDefensaY) * t};
 }
 
 Posicion MainWindow::convertirDefensaALogica(const QPointF& punto) const {
-    constexpr double profundidadMaxima = 10.5;
     const double centroX = width() / 2.0;
-    const double fondoY = height() - 82.0;
-    const double horizonteY = 92.0;
-    const double t = std::clamp((fondoY - punto.y()) / (fondoY - horizonteY), 0.0, 1.0);
-    const double ancho = 54.0 + 18.0 * (1.0 - t);
+    const double fondoY = height() - margenInferiorDefensa;
+    const double t = std::clamp((fondoY - punto.y()) / (fondoY - horizonteDefensaY), 0.0, 1.0);
+    const double ancho = anchoCarrilDefensa + variacionCarrilDefensa * (1.0 - t);
 
     return Posicion{
         static_cast<float>((punto.x() - centroX) / ancho),
-        static_cast<float>(t * profundidadMaxima)};
+        static_cast<float>(t * profundidadMaximaDefensa)};
 }
 
 double MainWindow::escalaDefensa(const Posicion& posicion) const {
-    constexpr double profundidadMaxima = 10.5;
-    const double t = std::clamp(static_cast<double>(posicion.y()) / profundidadMaxima, 0.0, 1.0);
+    const double t = std::clamp(static_cast<double>(posicion.y()) / profundidadMaximaDefensa, 0.0, 1.0);
     return 0.58 + (1.0 - t) * 0.72;
 }
 
 QRectF MainWindow::botonNivel1() const {
-    return QRectF{width() / 2.0 - 140.0, height() / 2.0 - 34.0, 280.0, 42.0};
+    return QRectF{
+        width() / 2.0 - anchoBotonMenu / 2.0,
+        height() / 2.0 - 34.0,
+        anchoBotonMenu,
+        altoBotonMenu};
 }
 
 QRectF MainWindow::botonNivel2() const {
-    return QRectF{width() / 2.0 - 140.0, height() / 2.0 + 22.0, 280.0, 42.0};
+    return QRectF{
+        width() / 2.0 - anchoBotonMenu / 2.0,
+        height() / 2.0 + 22.0,
+        anchoBotonMenu,
+        altoBotonMenu};
 }
 
 QRectF MainWindow::botonSalir() const {
-    return QRectF{width() / 2.0 - 140.0, height() / 2.0 + 78.0, 280.0, 42.0};
+    return QRectF{
+        width() / 2.0 - anchoBotonMenu / 2.0,
+        height() / 2.0 + 78.0,
+        anchoBotonMenu,
+        altoBotonMenu};
 }
 
 QRectF MainWindow::botonDificultadFacil() const {
-    return QRectF{width() / 2.0 - 140.0, height() / 2.0 + 142.0, 84.0, 34.0};
+    return QRectF{width() / 2.0 - 140.0, height() / 2.0 + 142.0, anchoBotonDificultad, altoBotonDificultad};
 }
 
 QRectF MainWindow::botonDificultadMedio() const {
-    return QRectF{width() / 2.0 - 42.0, height() / 2.0 + 142.0, 84.0, 34.0};
+    return QRectF{width() / 2.0 - 42.0, height() / 2.0 + 142.0, anchoBotonDificultad, altoBotonDificultad};
 }
 
 QRectF MainWindow::botonDificultadDificil() const {
-    return QRectF{width() / 2.0 + 56.0, height() / 2.0 + 142.0, 84.0, 34.0};
+    return QRectF{width() / 2.0 + 56.0, height() / 2.0 + 142.0, anchoBotonDificultad, altoBotonDificultad};
 }
 
 void MainWindow::iniciarNivelRutaTransmision() {
-    try {
+    ejecutarAccionSegura([this]() {
         juego_.cambiarANivelRutaTransmision();
         pantalla_ = Pantalla::Jugando;
         mensajeError_.clear();
@@ -257,13 +263,11 @@ void MainWindow::iniciarNivelRutaTransmision() {
         reloj_.restart();
         actualizarMusicaFondo();
         update();
-    } catch (const std::exception& error) {
-        registrarError(error);
-    }
+    });
 }
 
 void MainWindow::iniciarNivelDefensaNucleo() {
-    try {
+    ejecutarAccionSegura([this]() {
         juego_.cambiarANivelDefensaNucleo();
         pantalla_ = Pantalla::Jugando;
         mensajeError_.clear();
@@ -272,9 +276,7 @@ void MainWindow::iniciarNivelDefensaNucleo() {
         reloj_.restart();
         actualizarMusicaFondo();
         update();
-    } catch (const std::exception& error) {
-        registrarError(error);
-    }
+    });
 }
 
 void MainWindow::volverAlMenu() {
@@ -290,16 +292,46 @@ void MainWindow::reiniciarNivelActual() {
         return;
     }
 
-    try {
+    ejecutarAccionSegura([this]() {
         juego_.reiniciarNivelActivo();
         mensajeError_.clear();
         tieneObjetivo_ = false;
         reiniciarEfectosVisuales();
         reloj_.restart();
         update();
-    } catch (const std::exception& error) {
-        registrarError(error);
+    });
+}
+
+void MainWindow::manejarClickMenu(const QPointF& punto) {
+    if (botonNivel1().contains(punto)) {
+        iniciarNivelRutaTransmision();
+    } else if (botonNivel2().contains(punto)) {
+        iniciarNivelDefensaNucleo();
+    } else if (botonDificultadFacil().contains(punto)) {
+        juego_.establecerDificultadDefensa(DificultadDefensa::Facil);
+        update();
+    } else if (botonDificultadMedio().contains(punto)) {
+        juego_.establecerDificultadDefensa(DificultadDefensa::Medio);
+        update();
+    } else if (botonDificultadDificil().contains(punto)) {
+        juego_.establecerDificultadDefensa(DificultadDefensa::Dificil);
+        update();
+    } else if (botonSalir().contains(punto)) {
+        close();
     }
+}
+
+void MainWindow::manejarClickJuego(const QPointF& punto) {
+    if (juego_.nivelActivoFinalizado()) {
+        return;
+    }
+
+    if (dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual()) != nullptr) {
+        defenderEn(convertirDefensaALogica(punto));
+    } else {
+        lanzarDiscoHacia(convertirALogica(punto));
+    }
+    update();
 }
 
 void MainWindow::actualizarEfectosVisuales(std::chrono::milliseconds intervalo) {
@@ -356,6 +388,18 @@ void MainWindow::reiniciarEfectosVisuales() {
     finalRegistrado_ = false;
 }
 
+bool MainWindow::ejecutarAccionSegura(const std::function<void()>& accion) {
+    try {
+        accion();
+        return true;
+    } catch (const std::exception& error) {
+        pantalla_ = Pantalla::Menu;
+        actualizarMusicaFondo();
+        registrarError(error);
+        return false;
+    }
+}
+
 void MainWindow::registrarError(const std::exception& error) {
     mensajeError_ = QString::fromLocal8Bit(error.what());
     tieneObjetivo_ = false;
@@ -364,49 +408,32 @@ void MainWindow::registrarError(const std::exception& error) {
 }
 
 void MainWindow::inicializarSonido() {
-    musicaMenu_ = new QSoundEffect(this);
-    musicaMenu_->setSource(QUrl{"qrc:/audio/menu_loop.wav"});
-    musicaMenu_->setLoopCount(QSoundEffect::Infinite);
-    musicaMenu_->setVolume(0.18F);
-
-    sonidoCheckpoint_ = new QSoundEffect(this);
-    sonidoCheckpoint_->setSource(QUrl{"qrc:/audio/checkpoint.wav"});
-    sonidoCheckpoint_->setVolume(0.55F);
-
-    sonidoImpacto_ = new QSoundEffect(this);
-    sonidoImpacto_->setSource(QUrl{"qrc:/audio/destroy_enemy.wav"});
-    sonidoImpacto_->setVolume(0.6F);
-
-    sonidoVictoria_ = new QSoundEffect(this);
-    sonidoVictoria_->setSource(QUrl{"qrc:/audio/victory.wav"});
-    sonidoVictoria_->setVolume(0.65F);
-
-    sonidoDerrota_ = new QSoundEffect(this);
-    sonidoDerrota_->setSource(QUrl{"qrc:/audio/defeat.wav"});
-    sonidoDerrota_->setVolume(0.65F);
+    musicaMenu_ = crearEfectoSonido(this, audioMenu, volumenMusicaMenu, QSoundEffect::Infinite);
+    sonidoCheckpoint_ = crearEfectoSonido(this, audioCheckpoint, volumenCheckpoint);
+    sonidoImpacto_ = crearEfectoSonido(this, audioImpacto, volumenImpacto);
+    sonidoVictoria_ = crearEfectoSonido(this, audioVictoria, volumenResultado);
+    sonidoDerrota_ = crearEfectoSonido(this, audioDerrota, volumenResultado);
 }
 
 void MainWindow::reproducirSonidoCheckpoint() {
-    if (sonidoCheckpoint_ != nullptr) {
-        sonidoCheckpoint_->play();
-    }
+    reproducirSonido(sonidoCheckpoint_);
 }
 
 void MainWindow::reproducirSonidoImpacto() {
-    if (sonidoImpacto_ != nullptr) {
-        sonidoImpacto_->play();
-    }
+    reproducirSonido(sonidoImpacto_);
 }
 
 void MainWindow::reproducirSonidoVictoria() {
-    if (sonidoVictoria_ != nullptr) {
-        sonidoVictoria_->play();
-    }
+    reproducirSonido(sonidoVictoria_);
 }
 
 void MainWindow::reproducirSonidoDerrota() {
-    if (sonidoDerrota_ != nullptr) {
-        sonidoDerrota_->play();
+    reproducirSonido(sonidoDerrota_);
+}
+
+void MainWindow::reproducirSonido(QSoundEffect* sonido) const {
+    if (sonido != nullptr) {
+        sonido->play();
     }
 }
 
@@ -446,6 +473,18 @@ void MainWindow::defenderEn(const Posicion& objetivo) {
     }
 
     nivel->dispararDefensa(objetivo);
+}
+
+void MainWindow::dibujarFondo(QPainter& painter) const {
+    painter.fillRect(rect(), QColor{12, 16, 28});
+
+    painter.setPen(QPen(QColor{30, 180, 220}, 1));
+    for (int x = separacionGrid; x < width(); x += separacionGrid) {
+        painter.drawLine(x, 0, x, height());
+    }
+    for (int y = separacionGrid; y < height(); y += separacionGrid) {
+        painter.drawLine(0, y, width(), y);
+    }
 }
 
 void MainWindow::dibujarMenu(QPainter& painter) const {

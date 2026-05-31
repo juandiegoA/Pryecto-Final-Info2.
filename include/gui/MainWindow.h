@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstddef>
 #include <exception>
+#include <functional>
 #include <string>
 
 class QPaintEvent;
@@ -51,17 +52,22 @@ private:
     void iniciarNivelDefensaNucleo();
     void volverAlMenu();
     void reiniciarNivelActual();
+    void manejarClickMenu(const QPointF& punto);
+    void manejarClickJuego(const QPointF& punto);
     void actualizarEfectosVisuales(std::chrono::milliseconds intervalo);
     void reiniciarEfectosVisuales();
+    bool ejecutarAccionSegura(const std::function<void()>& accion);
     void registrarError(const std::exception& error);
     void inicializarSonido();
     void reproducirSonidoCheckpoint();
     void reproducirSonidoImpacto();
     void reproducirSonidoVictoria();
     void reproducirSonidoDerrota();
+    void reproducirSonido(QSoundEffect* sonido) const;
     void actualizarMusicaFondo();
     void lanzarDiscoHacia(const Posicion& destino);
     void defenderEn(const Posicion& objetivo);
+    void dibujarFondo(QPainter& painter) const;
     void dibujarMenu(QPainter& painter) const;
     void dibujarNivelRutaTransmision(QPainter& painter);
     void dibujarNivelDefensaNucleo(QPainter& painter);
