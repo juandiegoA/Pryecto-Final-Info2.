@@ -9,7 +9,9 @@
 NivelDefensaNucleo::NivelDefensaNucleo(
     Jugador& jugador,
     std::chrono::milliseconds tiempoObjetivo)
-    : jugador_(&jugador), temporizadorNivel_(tiempoObjetivo) {}
+    : jugador_(&jugador), temporizadorNivel_(tiempoObjetivo) {
+    configurarDificultad(dificultad_);
+}
 
 std::string NivelDefensaNucleo::nombre() const {
     return "Defensa del Nucleo";
@@ -29,6 +31,7 @@ void NivelDefensaNucleo::actualizar(std::chrono::milliseconds intervalo) {
     }
 
     temporizadorNivel_.actualizar(intervalo);
+    tiempoDesdeUltimoDisparoDefensor_ += intervalo;
     generarDiscosSiHaceFalta(intervalo);
 
     if (temporizadorNivel_.duracion().count() > 0
@@ -49,6 +52,19 @@ void NivelDefensaNucleo::actualizar(std::chrono::milliseconds intervalo) {
 
 }
 
+void NivelDefensaNucleo::configurarDificultad(DificultadDefensa dificultad) {
+    dificultad_ = dificultad;
+    const ConfiguracionDificultad configuracion = crearConfiguracion(dificultad);
+
+    carrilesAparicion_ = configuracion.carriles;
+    intervaloDisparo_ = configuracion.intervaloDisparoEnemigo;
+    intervaloProyectilDefensor_ = configuracion.intervaloProyectilDefensor;
+    velocidadDiscoEnemigo_ = configuracion.velocidadDiscoEnemigo;
+    velocidadProyectilDefensor_ = configuracion.velocidadProyectilDefensor;
+    toleranciaIntercepcion_ = configuracion.toleranciaIntercepcion;
+    maxDiscosActivos_ = configuracion.maxDiscosActivos;
+}
+
 void NivelDefensaNucleo::configurarJugador(Jugador& jugador) noexcept {
     jugador_ = &jugador;
 }
@@ -64,6 +80,7 @@ void NivelDefensaNucleo::configurarTiempoObjetivo(
 void NivelDefensaNucleo::iniciar() {
     temporizadorNivel_.iniciar();
     tiempoDesdeUltimoDisparo_ = intervaloDisparo_;
+    tiempoDesdeUltimoDisparoDefensor_ = intervaloProyectilDefensor_;
     siguienteCarril_ = 0;
     proyectilDefensorActivo_ = false;
     enCurso_ = true;
@@ -87,6 +104,9 @@ void NivelDefensaNucleo::dispararDefensa(const Posicion& objetivo) noexcept {
     if (!enCurso_ || estaFinalizado() || jugador_ == nullptr) {
         return;
     }
+    if (tiempoDesdeUltimoDisparoDefensor_ < intervaloProyectilDefensor_) {
+        return;
+    }
 
     const Posicion origen = jugador_->posicion();
     const Posicion direccion{
@@ -103,6 +123,7 @@ void NivelDefensaNucleo::dispararDefensa(const Posicion& objetivo) noexcept {
         direccion.x() / magnitud,
         direccion.y() / magnitud);
     proyectilDefensorActivo_ = true;
+    tiempoDesdeUltimoDisparoDefensor_ = std::chrono::milliseconds{0};
 }
 
 bool NivelDefensaNucleo::destruirDiscoEnemigo(std::size_t indice) noexcept {
@@ -138,6 +159,10 @@ const Posicion& NivelDefensaNucleo::posicionProyectilDefensor() const noexcept {
 
 bool NivelDefensaNucleo::proyectilDefensorActivo() const noexcept {
     return proyectilDefensorActivo_;
+}
+
+DificultadDefensa NivelDefensaNucleo::dificultad() const noexcept {
+    return dificultad_;
 }
 
 std::size_t NivelDefensaNucleo::discosActivos() const noexcept {
@@ -187,6 +212,58 @@ void NivelDefensaNucleo::moverDiscos(float segundos) noexcept {
     }
 }
 
+NivelDefensaNucleo::ConfiguracionDificultad NivelDefensaNucleo::crearConfiguracion(
+    DificultadDefensa dificultad) {
+    switch (dificultad) {
+    case DificultadDefensa::Facil:
+        return ConfiguracionDificultad{
+            {
+                Posicion{-2.8F, 9.0F},
+                Posicion{0.0F, 9.8F},
+                Posicion{2.8F, 9.0F}
+            },
+            std::chrono::milliseconds{2600},
+            std::chrono::milliseconds{180},
+            1.65F,
+            9.4F,
+            0.62F,
+            4};
+    case DificultadDefensa::Dificil:
+        return ConfiguracionDificultad{
+            {
+                Posicion{-3.8F, 10.0F},
+                Posicion{-1.3F, 8.7F},
+                Posicion{3.8F, 10.0F},
+                Posicion{1.3F, 8.7F},
+                Posicion{0.0F, 10.8F},
+                Posicion{-2.4F, 9.3F},
+                Posicion{2.4F, 9.3F}
+            },
+            std::chrono::milliseconds{1600},
+            std::chrono::milliseconds{520},
+            2.65F,
+            7.4F,
+            0.34F,
+            6};
+    case DificultadDefensa::Medio:
+    default:
+        return ConfiguracionDificultad{
+            {
+                Posicion{-3.5F, 9.5F},
+                Posicion{0.0F, 10.5F},
+                Posicion{3.5F, 9.5F},
+                Posicion{-1.8F, 8.5F},
+                Posicion{1.8F, 8.5F}
+            },
+            std::chrono::milliseconds{2200},
+            std::chrono::milliseconds{300},
+            2.0F,
+            8.0F,
+            0.45F,
+            5};
+    }
+}
+
 void NivelDefensaNucleo::actualizarProyectilDefensor(float segundos) noexcept {
     if (!proyectilDefensorActivo_ || segundos <= 0.0F) {
         return;
@@ -233,14 +310,11 @@ void NivelDefensaNucleo::generarDiscosSiHaceFalta(std::chrono::milliseconds inte
         return;
     }
 
-    const Posicion carriles[] = {
-        Posicion{-3.5F, 9.5F},
-        Posicion{0.0F, 10.5F},
-        Posicion{3.5F, 9.5F},
-        Posicion{-1.8F, 8.5F},
-        Posicion{1.8F, 8.5F}
-    };
-    const Posicion origen = carriles[siguienteCarril_ % std::size(carriles)];
+    if (carrilesAparicion_.empty()) {
+        carrilesAparicion_ = crearConfiguracion(dificultad_).carriles;
+    }
+
+    const Posicion origen = carrilesAparicion_[siguienteCarril_ % carrilesAparicion_.size()];
     ++siguienteCarril_;
     generarDiscoEnemigo(origen);
     tiempoDesdeUltimoDisparo_ = std::chrono::milliseconds{0};

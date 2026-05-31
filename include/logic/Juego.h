@@ -5,6 +5,7 @@
 #include "logic/DiscoEnemigo.h"
 #include "logic/Dron.h"
 #include "logic/Jugador.h"
+#include "logic/NivelDefensaNucleo.h"
 #include "logic/NodoCentralEnergia.h"
 #include "logic/Obstaculo.h"
 
@@ -30,6 +31,8 @@ public:
 
     void crearNivelRutaTransmision();
     void crearNivelDefensaNucleo();
+    void establecerDificultadDefensa(DificultadDefensa dificultad) noexcept;
+    DificultadDefensa dificultadDefensa() const noexcept;
     void cambiarANivelRutaTransmision();
     void cambiarANivelDefensaNucleo();
     void actualizar(std::chrono::milliseconds intervalo);
@@ -47,6 +50,7 @@ private:
     Jugador jugador_;
     Disco discoJugador_;
     std::unique_ptr<Nivel> nivelActual_;
+    DificultadDefensa dificultadDefensa_{DificultadDefensa::Medio};
     enum class TipoNivelActivo {
         Ninguno,
         RutaTransmision,

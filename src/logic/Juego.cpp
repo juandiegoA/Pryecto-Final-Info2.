@@ -56,6 +56,14 @@ void Juego::crearNivelDefensaNucleo() {
     configurarNivelDefensaNucleo();
 }
 
+void Juego::establecerDificultadDefensa(DificultadDefensa dificultad) noexcept {
+    dificultadDefensa_ = dificultad;
+}
+
+DificultadDefensa Juego::dificultadDefensa() const noexcept {
+    return dificultadDefensa_;
+}
+
 void Juego::cambiarANivelRutaTransmision() {
     crearNivelRutaTransmision();
 }
@@ -182,9 +190,24 @@ void Juego::configurarNivelDefensaNucleo() {
     discoJugador_ = Disco{Posicion{0.0F, 0.0F}};
 
     auto nivel = std::make_unique<NivelDefensaNucleo>(jugador_, 30000ms);
+    nivel->configurarDificultad(dificultadDefensa_);
 
-    discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{-2.5F, 8.0F}));
-    discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{2.5F, 9.5F}));
+    switch (dificultadDefensa_) {
+    case DificultadDefensa::Facil:
+        discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{0.0F, 8.8F}));
+        discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{2.6F, 9.5F}));
+        break;
+    case DificultadDefensa::Dificil:
+        discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{-3.2F, 9.8F}));
+        discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{0.0F, 10.7F}));
+        discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{3.2F, 9.8F}));
+        break;
+    case DificultadDefensa::Medio:
+    default:
+        discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{-2.5F, 8.0F}));
+        discosEnemigos_.push_back(std::make_unique<DiscoEnemigo>(Posicion{2.5F, 9.5F}));
+        break;
+    }
 
     for (const auto& discoEnemigo : discosEnemigos_) {
         nivel->agregarDiscoEnemigo(*discoEnemigo);

@@ -41,6 +41,9 @@ private:
     QRectF botonNivel1() const;
     QRectF botonNivel2() const;
     QRectF botonSalir() const;
+    QRectF botonDificultadFacil() const;
+    QRectF botonDificultadMedio() const;
+    QRectF botonDificultadDificil() const;
     void iniciarNivelRutaTransmision();
     void iniciarNivelDefensaNucleo();
     void volverAlMenu();

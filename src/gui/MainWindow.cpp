@@ -33,6 +33,18 @@ double progresoPulso(std::chrono::milliseconds restante, std::chrono::millisecon
         0.0,
         1.0);
 }
+
+QString textoDificultad(DificultadDefensa dificultad) {
+    switch (dificultad) {
+    case DificultadDefensa::Facil:
+        return "Facil";
+    case DificultadDefensa::Dificil:
+        return "Dificil";
+    case DificultadDefensa::Medio:
+    default:
+        return "Medio";
+    }
+}
 }
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -95,6 +107,15 @@ void MainWindow::mousePressEvent(QMouseEvent* event) {
             iniciarNivelRutaTransmision();
         } else if (botonNivel2().contains(punto)) {
             iniciarNivelDefensaNucleo();
+        } else if (botonDificultadFacil().contains(punto)) {
+            juego_.establecerDificultadDefensa(DificultadDefensa::Facil);
+            update();
+        } else if (botonDificultadMedio().contains(punto)) {
+            juego_.establecerDificultadDefensa(DificultadDefensa::Medio);
+            update();
+        } else if (botonDificultadDificil().contains(punto)) {
+            juego_.establecerDificultadDefensa(DificultadDefensa::Dificil);
+            update();
         } else if (botonSalir().contains(punto)) {
             close();
         }
@@ -202,6 +223,18 @@ QRectF MainWindow::botonNivel2() const {
 
 QRectF MainWindow::botonSalir() const {
     return QRectF{width() / 2.0 - 140.0, height() / 2.0 + 78.0, 280.0, 42.0};
+}
+
+QRectF MainWindow::botonDificultadFacil() const {
+    return QRectF{width() / 2.0 - 140.0, height() / 2.0 + 142.0, 84.0, 34.0};
+}
+
+QRectF MainWindow::botonDificultadMedio() const {
+    return QRectF{width() / 2.0 - 42.0, height() / 2.0 + 142.0, 84.0, 34.0};
+}
+
+QRectF MainWindow::botonDificultadDificil() const {
+    return QRectF{width() / 2.0 + 56.0, height() / 2.0 + 142.0, 84.0, 34.0};
 }
 
 void MainWindow::iniciarNivelRutaTransmision() {
@@ -316,7 +349,7 @@ void MainWindow::dibujarMenu(QPainter& painter) const {
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor{5, 12, 24, 150});
     painter.drawRoundedRect(
-        QRectF{width() / 2.0 - 250.0, 64.0, 500.0, 340.0},
+        QRectF{width() / 2.0 - 250.0, 58.0, 500.0, 406.0},
         18.0,
         18.0);
 
@@ -335,7 +368,7 @@ void MainWindow::dibujarMenu(QPainter& painter) const {
 
     const QList<QPair<QRectF, QString>> botones{
         {botonNivel1(), "Jugar Nivel 1 - Ruta de Transmision"},
-        {botonNivel2(), "Jugar Nivel 2 - Defensa del Nucleo"},
+        {botonNivel2(), QString{"Jugar Nivel 2 - Defensa (%1)"}.arg(textoDificultad(juego_.dificultadDefensa()))},
         {botonSalir(), "Salir"}};
 
     for (const auto& boton : botones) {
@@ -352,6 +385,30 @@ void MainWindow::dibujarMenu(QPainter& painter) const {
         painter.setPen(hover ? QColor{255, 255, 255} : QColor{235, 250, 255});
         painter.setFont(QFont{"Arial", 12, QFont::Bold});
         painter.drawText(boton.first, Qt::AlignCenter, boton.second);
+    }
+
+    painter.setPen(QColor{170, 220, 235});
+    painter.setFont(QFont{"Arial", 10, QFont::Bold});
+    painter.drawText(
+        QRectF{width() / 2.0 - 140.0, height() / 2.0 + 124.0, 280.0, 18.0},
+        Qt::AlignCenter,
+        "Dificultad del Nivel 2");
+
+    const QList<QPair<QRectF, DificultadDefensa>> botonesDificultad{
+        {botonDificultadFacil(), DificultadDefensa::Facil},
+        {botonDificultadMedio(), DificultadDefensa::Medio},
+        {botonDificultadDificil(), DificultadDefensa::Dificil}};
+    for (const auto& boton : botonesDificultad) {
+        const bool seleccionado = juego_.dificultadDefensa() == boton.second;
+        const bool hover = cursorSobreVentana_ && boton.first.contains(posicionCursor_);
+        painter.setPen(QPen(seleccionado ? QColor{255, 95, 140} : QColor{80, 220, 255}, seleccionado || hover ? 2 : 1));
+        painter.setBrush(seleccionado
+            ? QColor{60, 24, 48}
+            : (hover ? QColor{24, 58, 86} : QColor{13, 28, 48}));
+        painter.drawRoundedRect(boton.first, 7.0, 7.0);
+        painter.setPen(QColor{235, 250, 255});
+        painter.setFont(QFont{"Arial", 9, QFont::Bold});
+        painter.drawText(boton.first, Qt::AlignCenter, textoDificultad(boton.second));
     }
 
     painter.setPen(QColor{160, 190, 210});
@@ -557,7 +614,7 @@ void MainWindow::dibujarEstado(QPainter& painter) const {
     QString objetivoTexto = "Objetivo: --";
 
     if (const auto* nivelDefensa = dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual())) {
-        nivelTexto = "Nivel: Defensa del Nucleo";
+        nivelTexto = QString{"Nivel: Defensa del Nucleo (%1)"}.arg(textoDificultad(nivelDefensa->dificultad()));
         tiempoTexto = QString{"Tiempo: %1 s"}.arg(nivelDefensa->tiempoRestante().count() / 1000.0, 0, 'f', 1);
         objetivoTexto = QString{"Amenazas activas: %1"}.arg(nivelDefensa->discosActivos());
     } else {
