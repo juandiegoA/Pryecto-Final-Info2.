@@ -17,6 +17,7 @@ public:
 
     void lanzarDesde(const Posicion& origen, const Posicion& direccion, float velocidad) noexcept;
     void actualizar(float segundos) noexcept;
+    void reflejar(const Posicion& normal) noexcept;
     void detener() noexcept;
     void reiniciar() noexcept;
     void reiniciarEn(const Posicion& posicion) noexcept;

@@ -65,6 +65,20 @@ void Disco::actualizar(float segundos) noexcept {
         posicion_.y() + direccion_.y() * velocidad_ * segundos);
 }
 
+void Disco::reflejar(const Posicion& normal) noexcept {
+    const float magnitud = std::hypot(normal.x(), normal.y());
+    if (!activo_ || !enMovimiento_ || magnitud <= 0.0F) {
+        return;
+    }
+
+    const float nx = normal.x() / magnitud;
+    const float ny = normal.y() / magnitud;
+    const float producto = direccion_.x() * nx + direccion_.y() * ny;
+    direccion_.establecer(
+        direccion_.x() - 2.0F * producto * nx,
+        direccion_.y() - 2.0F * producto * ny);
+}
+
 void Disco::detener() noexcept {
     enMovimiento_ = false;
     velocidad_ = 0.0F;

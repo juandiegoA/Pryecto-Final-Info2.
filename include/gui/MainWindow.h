@@ -29,6 +29,7 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
 
 private:
@@ -93,6 +94,7 @@ private:
     std::string ultimoCheckpointActivado_;
     std::size_t ultimasAmenazasActivas_{0};
     bool tieneObjetivo_{false};
+    bool trazandoDisparo_{false};
     bool cursorSobreVentana_{false};
     bool finalRegistrado_{false};
     Pantalla pantalla_{Pantalla::Menu};

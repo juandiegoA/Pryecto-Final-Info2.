@@ -46,6 +46,7 @@ private:
     Checkpoint* objetivoActual() const noexcept;
     void iniciarTiempoObjetivo();
     void alcanzarObjetivo(Checkpoint& checkpoint);
+    void aplicarRebotes();
 
     std::vector<Checkpoint*> checkpoints;
     std::vector<Dron*> drones;

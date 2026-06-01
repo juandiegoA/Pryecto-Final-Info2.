@@ -1,9 +1,11 @@
 #include "gui/MainWindow.h"
 
 #include "logic/BarreraEstatica.h"
+#include "logic/BarreraMovil.h"
 #include "logic/BarreraTemporizada.h"
 #include "logic/NivelDefensaNucleo.h"
 #include "logic/NivelRutaTransmision.h"
+#include "logic/SuperficieRebote.h"
 
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -29,8 +31,8 @@ constexpr int altoMinimoVentana = 450;
 constexpr int intervaloActualizacionMs = 16;
 constexpr int separacionGrid = 40;
 
-constexpr double escalaRuta = 55.0;
-constexpr double origenRutaX = 80.0;
+constexpr double escalaRuta = 34.0;
+constexpr double origenRutaX = 70.0;
 constexpr double profundidadMaximaDefensa = 10.5;
 constexpr double margenInferiorDefensa = 82.0;
 constexpr double horizonteDefensaY = 92.0;
@@ -137,6 +139,10 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 void MainWindow::mouseMoveEvent(QMouseEvent* event) {
     posicionCursor_ = event->position();
     cursorSobreVentana_ = true;
+    if (trazandoDisparo_) {
+        ultimoObjetivo_ = convertirALogica(event->position());
+        tieneObjetivo_ = true;
+    }
     update();
     QMainWindow::mouseMoveEvent(event);
 }
@@ -156,6 +162,17 @@ void MainWindow::mousePressEvent(QMouseEvent* event) {
     manejarClickJuego(event->position());
 
     QMainWindow::mousePressEvent(event);
+}
+
+void MainWindow::mouseReleaseEvent(QMouseEvent* event) {
+    if (event->button() == Qt::LeftButton && trazandoDisparo_) {
+        ultimoObjetivo_ = convertirALogica(event->position());
+        lanzarDiscoHacia(ultimoObjetivo_);
+        trazandoDisparo_ = false;
+        update();
+    }
+
+    QMainWindow::mouseReleaseEvent(event);
 }
 
 void MainWindow::paintEvent(QPaintEvent* event) {
@@ -259,6 +276,7 @@ void MainWindow::iniciarNivelRutaTransmision() {
         pantalla_ = Pantalla::Jugando;
         mensajeError_.clear();
         tieneObjetivo_ = false;
+        trazandoDisparo_ = false;
         reiniciarEfectosVisuales();
         reloj_.restart();
         actualizarMusicaFondo();
@@ -272,6 +290,7 @@ void MainWindow::iniciarNivelDefensaNucleo() {
         pantalla_ = Pantalla::Jugando;
         mensajeError_.clear();
         tieneObjetivo_ = false;
+        trazandoDisparo_ = false;
         reiniciarEfectosVisuales();
         reloj_.restart();
         actualizarMusicaFondo();
@@ -282,6 +301,7 @@ void MainWindow::iniciarNivelDefensaNucleo() {
 void MainWindow::volverAlMenu() {
     pantalla_ = Pantalla::Menu;
     tieneObjetivo_ = false;
+    trazandoDisparo_ = false;
     reiniciarEfectosVisuales();
     actualizarMusicaFondo();
     update();
@@ -296,6 +316,7 @@ void MainWindow::reiniciarNivelActual() {
         juego_.reiniciarNivelActivo();
         mensajeError_.clear();
         tieneObjetivo_ = false;
+        trazandoDisparo_ = false;
         reiniciarEfectosVisuales();
         reloj_.restart();
         update();
@@ -329,7 +350,9 @@ void MainWindow::manejarClickJuego(const QPointF& punto) {
     if (dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual()) != nullptr) {
         defenderEn(convertirDefensaALogica(punto));
     } else {
-        lanzarDiscoHacia(convertirALogica(punto));
+        ultimoObjetivo_ = convertirALogica(punto);
+        tieneObjetivo_ = true;
+        trazandoDisparo_ = true;
     }
     update();
 }
@@ -403,6 +426,7 @@ bool MainWindow::ejecutarAccionSegura(const std::function<void()>& accion) {
 void MainWindow::registrarError(const std::exception& error) {
     mensajeError_ = QString::fromLocal8Bit(error.what());
     tieneObjetivo_ = false;
+    trazandoDisparo_ = false;
     reiniciarEfectosVisuales();
     update();
 }
@@ -616,12 +640,24 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
             const QPointF centro = convertirAPantalla(barrera->posicion());
             painter.setBrush(QColor{230, 70, 70});
             painter.drawRect(QRectF{centro.x() - 14.0, centro.y() - 28.0, 28.0, 56.0});
+        } else if (const auto* barrera = dynamic_cast<const BarreraMovil*>(obstaculo)) {
+            const QPointF centro = convertirAPantalla(barrera->posicion());
+            painter.setBrush(QColor{95, 255, 235});
+            painter.drawRoundedRect(QRectF{centro.x() - 16.0, centro.y() - 24.0, 32.0, 48.0}, 6.0, 6.0);
+            painter.setBrush(QColor{215, 255, 255});
+            painter.drawRect(QRectF{centro.x() - 4.0, centro.y() - 20.0, 8.0, 40.0});
         } else if (const auto* barrera = dynamic_cast<const BarreraTemporizada*>(obstaculo)) {
             const QPointF centro = convertirAPantalla(barrera->posicion());
             painter.setBrush(barrera->estaActivo()
                 ? QColor{255, 120, 70}
                 : QColor{70, 90, 120});
             painter.drawRect(QRectF{centro.x() - 14.0, centro.y() - 28.0, 28.0, 56.0});
+        } else if (const auto* rebote = dynamic_cast<const SuperficieRebote*>(obstaculo)) {
+            const QPointF centro = convertirAPantalla(rebote->posicion());
+            painter.setBrush(QColor{255, 80, 210});
+            painter.drawRoundedRect(QRectF{centro.x() - 22.0, centro.y() - 8.0, 44.0, 16.0}, 7.0, 7.0);
+            painter.setBrush(QColor{255, 190, 240});
+            painter.drawEllipse(centro, 5.0, 5.0);
         }
     }
 
@@ -631,12 +667,17 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
         }
 
         const QPointF centro = convertirAPantalla(dron->posicion());
-        painter.setBrush(QColor{80, 180, 255});
-        painter.drawEllipse(centro, 10.0, 10.0);
+        const bool dronFinal = dron->posicion().x() > 20.0F;
+        painter.setBrush(dronFinal ? QColor{255, 60, 70} : QColor{80, 180, 255});
+        painter.drawEllipse(centro, dronFinal ? 13.0 : 10.0, dronFinal ? 13.0 : 10.0);
+        if (dronFinal) {
+            painter.setBrush(QColor{255, 160, 160});
+            painter.drawEllipse(centro, 5.0, 5.0);
+        }
     }
 
     const QPointF jugador = convertirAPantalla(juego_.jugador().posicion());
-    if (tieneObjetivo_) {
+    if (trazandoDisparo_) {
         painter.setPen(QPen(QColor{120, 240, 255}, 2, Qt::DashLine));
         painter.drawLine(jugador, convertirAPantalla(ultimoObjetivo_));
         painter.setPen(Qt::NoPen);
@@ -804,7 +845,9 @@ void MainWindow::dibujarEstado(QPainter& painter) const {
     painter.drawText(34, 132, estadoTexto);
 
     painter.setPen(QColor{150, 205, 225});
-    painter.drawText(34, 154, "Clic: accion | R: reiniciar | Esc/M: menu");
+    painter.drawText(34, 154, defensa
+        ? "Clic: accion | R: reiniciar | Esc/M: menu"
+        : "Arrastra: trazar disco | R: reiniciar | Esc/M: menu");
 }
 
 void MainWindow::dibujarOverlayFinal(QPainter& painter) const {

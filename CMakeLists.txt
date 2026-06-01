@@ -12,6 +12,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets Multimedia)
 add_library(tron_logic
     src/logic/AgenteInteligente.cpp
     src/logic/BarreraEstatica.cpp
+    src/logic/BarreraMovil.cpp
     src/logic/BarreraTemporizada.cpp
     src/logic/Checkpoint.cpp
     src/logic/Disco.cpp
@@ -25,6 +26,7 @@ add_library(tron_logic
     src/logic/NodoCentralEnergia.cpp
     src/logic/Obstaculo.cpp
     src/logic/Posicion.cpp
+    src/logic/SuperficieRebote.cpp
     src/logic/Temporizador.cpp
 )
 

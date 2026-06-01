@@ -6,6 +6,7 @@
 #include "logic/Jugador.h"
 #include "logic/NodoCentralEnergia.h"
 #include "logic/Obstaculo.h"
+#include "logic/SuperficieRebote.h"
 
 NivelRutaTransmision::NivelRutaTransmision(Jugador& jugador, Disco& disco)
     : jugador_(&jugador), disco_(&disco) {}
@@ -37,6 +38,7 @@ void NivelRutaTransmision::actualizar(std::chrono::milliseconds intervalo) {
     }
 
     disco_->actualizar(segundos);
+    aplicarRebotes();
     temporizadorCheckpoint_.actualizar(intervalo);
 
     if (verificarColisionConObstaculos() || verificarColisionConDrones()) {
@@ -205,4 +207,17 @@ void NivelRutaTransmision::alcanzarObjetivo(Checkpoint& checkpoint) {
     disco_->reiniciarEn(checkpoint.posicion());
     ++indiceObjetivo_;
     iniciarTiempoObjetivo();
+}
+
+void NivelRutaTransmision::aplicarRebotes() {
+    if (disco_ == nullptr) {
+        return;
+    }
+
+    for (Obstaculo* obstaculo : obstaculos) {
+        auto* superficie = dynamic_cast<SuperficieRebote*>(obstaculo);
+        if (superficie != nullptr) {
+            superficie->aplicarRebote(*disco_);
+        }
+    }
 }
