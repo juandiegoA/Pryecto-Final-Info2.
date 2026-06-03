@@ -4,6 +4,7 @@
 #include "logic/Temporizador.h"
 
 #include <cstddef>
+#include <string>
 #include <vector>
 
 class Checkpoint;
@@ -12,6 +13,14 @@ class Dron;
 class Jugador;
 class NodoCentralEnergia;
 class Obstaculo;
+
+struct TramoRutaTransmision {
+    std::string etiqueta;
+    float inicioX{0.0F};
+    float finX{0.0F};
+    float minimoY{0.0F};
+    float maximoY{0.0F};
+};
 
 class NivelRutaTransmision final : public Nivel {
 public:
@@ -26,11 +35,13 @@ public:
     void agregarCheckpoint(Checkpoint& checkpoint);
     void agregarDron(Dron& dron);
     void agregarObstaculo(Obstaculo& obstaculo);
+    void agregarTramo(TramoRutaTransmision tramo);
     void establecerMetaFinal(NodoCentralEnergia& meta) noexcept;
 
     const std::vector<Checkpoint*>& obtenerCheckpoints() const noexcept;
     const std::vector<Dron*>& obtenerDrones() const noexcept;
     const std::vector<Obstaculo*>& obtenerObstaculos() const noexcept;
+    const std::vector<TramoRutaTransmision>& obtenerTramos() const noexcept;
     const Checkpoint* checkpointActual() const noexcept;
     const Checkpoint* objetivoActualCheckpoint() const noexcept;
     const NodoCentralEnergia* metaFinal() const noexcept;
@@ -51,6 +62,7 @@ private:
     std::vector<Checkpoint*> checkpoints;
     std::vector<Dron*> drones;
     std::vector<Obstaculo*> obstaculos;
+    std::vector<TramoRutaTransmision> tramos_;
     Jugador* jugador_{nullptr};
     Disco* disco_{nullptr};
     NodoCentralEnergia* metaFinal_{nullptr};

@@ -8,6 +8,8 @@
 #include "logic/Obstaculo.h"
 #include "logic/SuperficieRebote.h"
 
+#include <utility>
+
 NivelRutaTransmision::NivelRutaTransmision(Jugador& jugador, Disco& disco)
     : jugador_(&jugador), disco_(&disco) {}
 
@@ -79,6 +81,10 @@ void NivelRutaTransmision::agregarObstaculo(Obstaculo& obstaculo) {
     obstaculos.push_back(&obstaculo);
 }
 
+void NivelRutaTransmision::agregarTramo(TramoRutaTransmision tramo) {
+    tramos_.push_back(std::move(tramo));
+}
+
 void NivelRutaTransmision::establecerMetaFinal(NodoCentralEnergia& meta) noexcept {
     metaFinal_ = &meta;
     if (indiceObjetivo_ >= checkpoints.size()) {
@@ -96,6 +102,10 @@ const std::vector<Dron*>& NivelRutaTransmision::obtenerDrones() const noexcept {
 
 const std::vector<Obstaculo*>& NivelRutaTransmision::obtenerObstaculos() const noexcept {
     return obstaculos;
+}
+
+const std::vector<TramoRutaTransmision>& NivelRutaTransmision::obtenerTramos() const noexcept {
+    return tramos_;
 }
 
 const Checkpoint* NivelRutaTransmision::checkpointActual() const noexcept {

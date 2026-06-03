@@ -18,6 +18,7 @@
 #include <QUrl>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <exception>
@@ -31,8 +32,8 @@ constexpr int altoMinimoVentana = 450;
 constexpr int intervaloActualizacionMs = 16;
 constexpr int separacionGrid = 40;
 
-constexpr double escalaRuta = 34.0;
-constexpr double origenRutaX = 70.0;
+constexpr double escalaRuta = 26.0;
+constexpr double origenRutaX = 42.0;
 constexpr double profundidadMaximaDefensa = 10.5;
 constexpr double margenInferiorDefensa = 82.0;
 constexpr double horizonteDefensaY = 92.0;
@@ -610,22 +611,53 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
         return QRectF{superiorIzquierda, inferiorDerecha}.normalized();
     };
 
-    const auto dibujarZona = [&painter, &rectLogico](double x1, double x2, const QColor& color, const QString& texto) {
-        const QRectF zona = rectLogico(x1, -3.45, x2, 2.35);
+    const QRectF carrilSuperior = rectLogico(0.25, 0.95, 16.2, 3.25);
+    painter.setPen(QPen(QColor{80, 240, 255, 120}, 2));
+    painter.setBrush(QColor{20, 80, 105, 55});
+    painter.drawRoundedRect(carrilSuperior, 12.0, 12.0);
+    painter.setPen(QColor{130, 245, 255, 150});
+    painter.setFont(QFont{"Arial", 8, QFont::Bold});
+    painter.drawText(
+        carrilSuperior.adjusted(8.0, 5.0, -8.0, -5.0),
+        Qt::AlignTop | Qt::AlignLeft,
+        "INICIO / SUBIDA");
+
+    const QRectF carrilInferior = rectLogico(6.4, -3.55, 30.75, -0.4);
+    painter.setPen(QPen(QColor{255, 90, 205, 105}, 2));
+    painter.setBrush(QColor{92, 24, 86, 58});
+    painter.drawRoundedRect(carrilInferior, 12.0, 12.0);
+    painter.setPen(QColor{255, 175, 235, 150});
+    painter.setFont(QFont{"Arial", 8, QFont::Bold});
+    painter.drawText(
+        carrilInferior.adjusted(8.0, 5.0, -8.0, -5.0),
+        Qt::AlignTop | Qt::AlignLeft,
+        "DESCENSO / FINAL");
+
+    const auto dibujarZona = [&painter, &rectLogico](const TramoRutaTransmision& tramo, const QColor& color) {
+        const QRectF zona = rectLogico(tramo.inicioX, tramo.minimoY, tramo.finX, tramo.maximoY);
         painter.setPen(QPen(color, 1));
         painter.setBrush(QColor{color.red(), color.green(), color.blue(), 30});
         painter.drawRoundedRect(zona, 10.0, 10.0);
         painter.setPen(QColor{color.red(), color.green(), color.blue(), 150});
         painter.setFont(QFont{"Arial", 8, QFont::Bold});
-        painter.drawText(zona.adjusted(6.0, 4.0, -6.0, -4.0), Qt::AlignTop | Qt::AlignHCenter, texto);
+        painter.drawText(
+            zona.adjusted(6.0, 4.0, -6.0, -4.0),
+            Qt::AlignTop | Qt::AlignHCenter,
+            QString::fromStdString(tramo.etiqueta));
     };
 
-    dibujarZona(2.05, 3.1, QColor{90, 255, 235}, "PUERTA");
-    dibujarZona(4.25, 6.1, QColor{100, 190, 255}, "GUARDIANES");
-    dibujarZona(7.05, 9.85, QColor{255, 190, 80}, "DESCENSO");
-    dibujarZona(10.75, 14.3, QColor{120, 230, 255}, "TRAMO MEDIO");
-    dibujarZona(14.35, 17.65, QColor{255, 80, 210}, "REBOTE");
-    dibujarZona(19.55, 23.55, QColor{255, 80, 105}, "FINAL");
+    static const std::array<QColor, 6> coloresTramos{
+        QColor{90, 255, 235},
+        QColor{100, 190, 255},
+        QColor{255, 190, 80},
+        QColor{120, 230, 255},
+        QColor{255, 80, 210},
+        QColor{255, 80, 105}};
+    std::size_t indiceTramo = 0;
+    for (const TramoRutaTransmision& tramo : nivel->obtenerTramos()) {
+        dibujarZona(tramo, coloresTramos[indiceTramo % coloresTramos.size()]);
+        ++indiceTramo;
+    }
 
     QPolygonF rutaSugerida;
     rutaSugerida << convertirAPantalla(Posicion{0.0F, 0.0F});
@@ -705,6 +737,9 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
         } else if (const auto* barrera = dynamic_cast<const BarreraMovil*>(obstaculo)) {
             const QPointF centro = convertirAPantalla(barrera->posicion());
             const bool compuerta = barrera->posicion().x() < 3.2F;
+            const bool puertaHorizontal =
+                barrera->posicion().x() > 12.0F && barrera->posicion().x() < 15.3F
+                && barrera->posicion().y() > 0.5F && barrera->posicion().y() < 1.4F;
             const QColor colorBase = compuerta ? QColor{85, 255, 230} : QColor{95, 210, 255};
             if (compuerta) {
                 painter.setBrush(Qt::NoBrush);
@@ -714,9 +749,15 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
                 painter.setPen(Qt::NoPen);
             }
             painter.setBrush(colorBase);
-            painter.drawRoundedRect(QRectF{centro.x() - 18.0, centro.y() - 26.0, 36.0, 52.0}, 6.0, 6.0);
+            painter.drawRoundedRect(puertaHorizontal
+                ? QRectF{centro.x() - 32.0, centro.y() - 11.0, 64.0, 22.0}
+                : QRectF{centro.x() - 18.0, centro.y() - 26.0, 36.0, 52.0},
+                6.0,
+                6.0);
             painter.setBrush(QColor{225, 255, 255});
-            painter.drawRect(QRectF{centro.x() - 4.0, centro.y() - 20.0, 8.0, 40.0});
+            painter.drawRect(puertaHorizontal
+                ? QRectF{centro.x() - 26.0, centro.y() - 3.0, 52.0, 6.0}
+                : QRectF{centro.x() - 4.0, centro.y() - 20.0, 8.0, 40.0});
         } else if (const auto* barrera = dynamic_cast<const BarreraTemporizada*>(obstaculo)) {
             const QPointF centro = convertirAPantalla(barrera->posicion());
             painter.setBrush(barrera->estaActivo()
@@ -725,10 +766,15 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
             painter.drawRect(QRectF{centro.x() - 14.0, centro.y() - 28.0, 28.0, 56.0});
         } else if (const auto* rebote = dynamic_cast<const SuperficieRebote*>(obstaculo)) {
             const QPointF centro = convertirAPantalla(rebote->posicion());
+            const bool paredVertical = std::abs(rebote->normal().x()) > std::abs(rebote->normal().y());
             painter.setBrush(QColor{255, 60, 210, 70});
-            painter.drawEllipse(centro, 30.0, 18.0);
+            painter.drawEllipse(centro, paredVertical ? 18.0 : 30.0, paredVertical ? 30.0 : 18.0);
             painter.setBrush(QColor{255, 80, 210});
-            painter.drawRoundedRect(QRectF{centro.x() - 28.0, centro.y() - 9.0, 56.0, 18.0}, 8.0, 8.0);
+            painter.drawRoundedRect(paredVertical
+                ? QRectF{centro.x() - 9.0, centro.y() - 34.0, 18.0, 68.0}
+                : QRectF{centro.x() - 28.0, centro.y() - 9.0, 56.0, 18.0},
+                8.0,
+                8.0);
             painter.setBrush(QColor{255, 190, 240});
             painter.drawEllipse(centro, 5.0, 5.0);
             const QPointF normal = convertirAPantalla(Posicion{
