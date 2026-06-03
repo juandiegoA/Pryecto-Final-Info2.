@@ -134,23 +134,23 @@ void Juego::configurarNivelRutaTransmision() {
     // Fases 2, 3, 4, 5 y 6: cinco nodos obligatorios antes del nodo central.
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-1",
-        Posicion{5.4F, 0.0F},
+        Posicion{5.2F, 0.0F},
         5400ms));
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-2",
-        Posicion{9.2F, -2.4F},
+        Posicion{9.55F, -2.65F},
         6200ms));
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-3",
-        Posicion{13.0F, 1.6F},
+        Posicion{12.75F, 1.35F},
         6500ms));
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-4",
-        Posicion{16.4F, -1.8F},
+        Posicion{16.15F, -1.95F},
         7200ms));
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-5",
-        Posicion{20.1F, 0.8F},
+        Posicion{20.05F, 0.15F},
         7000ms));
 
     for (const auto& checkpoint : checkpoints_) {
@@ -159,98 +159,94 @@ void Juego::configurarNivelRutaTransmision() {
 
     metaFinal_ = std::make_unique<NodoCentralEnergia>(
         "nodo-central",
-        Posicion{23.4F, 0.0F},
+        Posicion{23.25F, 0.0F},
         6500ms);
     nivel->establecerMetaFinal(*metaFinal_);
 
     // Fase 1: compuerta de entrada, dos paredes enfrentadas que abren y cierran.
     obstaculos_.push_back(std::make_unique<BarreraMovil>(
-        Posicion{2.7F, 1.35F},
-        Posicion{2.7F, 0.22F},
+        Posicion{2.55F, 1.25F},
+        Posicion{2.55F, 0.18F},
         0.95F,
-        0.48F));
+        0.5F));
     obstaculos_.push_back(std::make_unique<BarreraMovil>(
-        Posicion{2.7F, -1.35F},
-        Posicion{2.7F, -0.22F},
+        Posicion{2.55F, -1.25F},
+        Posicion{2.55F, -0.18F},
         0.95F,
-        0.48F));
+        0.5F));
 
-    // Fase 4: transición media con una pared móvil y una barrera temporizada.
+    // Fase 4: transicion media con una pared movil y una barrera temporizada.
     obstaculos_.push_back(std::make_unique<BarreraMovil>(
-        Posicion{11.35F, -1.05F},
-        Posicion{11.35F, 0.65F},
+        Posicion{11.3F, -0.75F},
+        Posicion{11.3F, 1.1F},
         0.65F,
         0.43F));
     obstaculos_.push_back(std::make_unique<BarreraTemporizada>(
-        Posicion{12.55F, 0.95F},
+        Posicion{12.05F, 0.35F},
         0.45F,
         1150ms,
         850ms));
 
     // Fase 6: bloqueo previo al defensor final.
     obstaculos_.push_back(std::make_unique<BarreraTemporizada>(
-        Posicion{18.5F, 0.05F},
+        Posicion{18.65F, -0.55F},
         0.5F,
         800ms,
         900ms));
 
     // Fase 5: superficies rosadas usadas para redirigir el disco hacia la salida.
     obstaculos_.push_back(std::make_unique<SuperficieRebote>(
-        Posicion{14.7F, -1.55F},
-        Posicion{0.25F, 1.0F},
-        0.72F));
+        Posicion{14.8F, -2.65F},
+        Posicion{0.8F, 1.0F},
+        0.78F));
     obstaculos_.push_back(std::make_unique<SuperficieRebote>(
-        Posicion{16.1F, -3.0F},
-        Posicion{0.95F, 0.7F},
-        0.72F));
-    obstaculos_.push_back(std::make_unique<SuperficieRebote>(
-        Posicion{17.55F, -1.75F},
-        Posicion{-0.6F, 0.9F},
-        0.72F));
+        Posicion{17.05F, -1.05F},
+        Posicion{-0.75F, 1.0F},
+        0.78F));
 
     for (const auto& obstaculo : obstaculos_) {
         nivel->agregarObstaculo(*obstaculo);
     }
 
     // Fase 2: dos drones verticales que enmarcan el primer checkpoint.
-    drones_.push_back(std::make_unique<Dron>(Posicion{4.7F, -1.3F}, 1.35F));
+    drones_.push_back(std::make_unique<Dron>(Posicion{4.65F, -1.15F}, 1.3F));
     drones_.back()->definirRutaVigilancia({
-        Posicion{4.7F, -1.3F},
-        Posicion{4.7F, 1.3F}
+        Posicion{4.65F, -1.15F},
+        Posicion{4.65F, 1.15F}
     });
-    drones_.push_back(std::make_unique<Dron>(Posicion{6.1F, 1.3F}, 1.35F));
+    drones_.push_back(std::make_unique<Dron>(Posicion{5.75F, 1.15F}, 1.3F));
     drones_.back()->definirRutaVigilancia({
-        Posicion{6.1F, 1.3F},
-        Posicion{6.1F, -1.3F}
-    });
-
-    // Fase 3: descenso con drones asincrónicos, uno sube mientras el otro baja.
-    drones_.push_back(std::make_unique<Dron>(Posicion{7.9F, -3.1F}, 1.25F));
-    drones_.back()->definirRutaVigilancia({
-        Posicion{7.9F, -3.1F},
-        Posicion{7.9F, -1.2F}
-    });
-    drones_.push_back(std::make_unique<Dron>(Posicion{9.9F, -1.2F}, 1.25F));
-    drones_.back()->definirRutaVigilancia({
-        Posicion{9.9F, -1.2F},
-        Posicion{9.9F, -3.1F}
+        Posicion{5.75F, 1.15F},
+        Posicion{5.75F, -1.15F}
     });
 
-    // Fase 4: un dron de patrulla corta en la transición media.
-    drones_.push_back(std::make_unique<Dron>(Posicion{14.2F, 0.2F}, 1.15F));
+    // Fase 3: descenso con drones asincronicos, uno sube mientras el otro baja.
+    drones_.push_back(std::make_unique<Dron>(Posicion{7.45F, -0.9F}, 1.25F));
     drones_.back()->definirRutaVigilancia({
-        Posicion{14.2F, 0.2F},
-        Posicion{15.4F, 1.5F},
-        Posicion{13.2F, 2.1F}
+        Posicion{7.45F, -0.9F},
+        Posicion{7.45F, -3.0F}
+    });
+    drones_.push_back(std::make_unique<Dron>(Posicion{8.6F, -3.0F}, 1.25F));
+    drones_.back()->definirRutaVigilancia({
+        Posicion{8.6F, -3.0F},
+        Posicion{8.6F, -0.9F}
+    });
+
+    // Fase 4: un dron de patrulla corta en la transicion media.
+    drones_.push_back(std::make_unique<Dron>(Posicion{13.85F, 0.25F}, 1.1F));
+    drones_.back()->definirRutaVigilancia({
+        Posicion{13.85F, 0.25F},
+        Posicion{14.8F, 1.45F},
+        Posicion{12.95F, 1.9F}
     });
 
     // Fase 7: defensor rojo final, restringido al acceso del nodo central.
-    drones_.push_back(std::make_unique<Dron>(Posicion{21.8F, 0.7F}, 2.15F));
+    drones_.push_back(std::make_unique<Dron>(Posicion{21.85F, 0.0F}, 2.05F));
     drones_.back()->definirRutaVigilancia({
-        Posicion{21.1F, 1.2F},
-        Posicion{22.5F, -0.8F},
-        Posicion{21.6F, -1.4F},
-        Posicion{22.8F, 0.6F}
+        Posicion{21.35F, 0.95F},
+        Posicion{22.35F, -0.95F},
+        Posicion{21.35F, -0.95F},
+        Posicion{22.35F, 0.95F}
     });
 
     for (const auto& dron : drones_) {
