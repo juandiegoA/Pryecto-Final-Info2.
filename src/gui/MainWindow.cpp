@@ -384,8 +384,12 @@ Posicion MainWindow::convertirDefensaALogica(const QPointF& punto) const {
 }
 
 double MainWindow::escalaDefensa(const Posicion& posicion) const {
-    const double t = std::clamp(static_cast<double>(posicion.y()) / profundidadMaximaDefensa, 0.0, 1.0);
-    return 0.42 + (1.0 - t) * 0.95;
+    constexpr double escalaMinimaFondo = 0.38;
+    constexpr double escalaMaximaCerca = 1.55;
+    const double profundidad = std::clamp(static_cast<double>(posicion.y()) / profundidadMaximaDefensa, 0.0, 1.0);
+    const double cercania = 1.0 - profundidad;
+    const double cercaniaSuave = cercania * cercania * (3.0 - 2.0 * cercania);
+    return escalaMinimaFondo + cercaniaSuave * (escalaMaximaCerca - escalaMinimaFondo);
 }
 
 QRectF MainWindow::botonNivel1() const {
