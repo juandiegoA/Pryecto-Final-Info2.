@@ -36,10 +36,10 @@ constexpr int separacionGrid = 40;
 constexpr double escalaRuta = 21.5;
 constexpr double origenRutaX = 36.0;
 constexpr double profundidadMaximaDefensa = 10.5;
-constexpr double margenInferiorDefensa = 58.0;
-constexpr double horizonteDefensaY = 92.0;
-constexpr double anchoCarrilDefensa = 34.0;
-constexpr double variacionCarrilDefensa = 50.0;
+constexpr double margenInferiorDefensa = 46.0;
+constexpr double horizonteDefensaY = 86.0;
+constexpr double anchoCarrilDefensa = 22.0;
+constexpr double variacionCarrilDefensa = 78.0;
 
 constexpr double anchoBotonMenu = 280.0;
 constexpr double altoBotonMenu = 42.0;
@@ -384,8 +384,8 @@ Posicion MainWindow::convertirDefensaALogica(const QPointF& punto) const {
 }
 
 double MainWindow::escalaDefensa(const Posicion& posicion) const {
-    constexpr double escalaMinimaFondo = 0.38;
-    constexpr double escalaMaximaCerca = 1.55;
+    constexpr double escalaMinimaFondo = 0.26;
+    constexpr double escalaMaximaCerca = 2.05;
     const double profundidad = std::clamp(static_cast<double>(posicion.y()) / profundidadMaximaDefensa, 0.0, 1.0);
     const double cercania = 1.0 - profundidad;
     const double cercaniaSuave = cercania * cercania * (3.0 - 2.0 * cercania);
@@ -662,12 +662,12 @@ void MainWindow::dibujarFondo(QPainter& painter) const {
     painter.fillRect(rect(), defensa ? QColor{5, 10, 20} : QColor{12, 16, 28});
 
     if (defensa) {
-        painter.setPen(QPen(QColor{18, 80, 118, 95}, 1));
+        painter.setPen(QPen(QColor{10, 44, 72, 70}, 1));
         const int horizonte = static_cast<int>(horizonteDefensaY);
         for (int y = horizonte; y < height(); y += separacionGrid * 2) {
             painter.drawLine(0, y, width(), y);
         }
-        painter.setPen(QPen(QColor{16, 60, 92, 70}, 1));
+        painter.setPen(QPen(QColor{28, 115, 170, 120}, 1));
         painter.drawLine(0, horizonte, width(), horizonte);
         return;
     }
@@ -1046,39 +1046,86 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
 
     const QPointF horizonte{width() / 2.0, horizonteDefensaY};
     const double fondoY = height() - margenInferiorDefensa;
-    const double anchoCerca = anchoCarrilDefensa + variacionCarrilDefensa;
-    const double anchoLejos = anchoCarrilDefensa * 0.35;
+    const double anchoCerca = (anchoCarrilDefensa + variacionCarrilDefensa) * 1.18;
+    const double anchoLejos = anchoCarrilDefensa * 0.24;
 
     QPolygonF pista;
-    pista << QPointF{width() / 2.0 - anchoCerca * 4.05, fondoY + 20.0}
-          << QPointF{width() / 2.0 + anchoCerca * 4.05, fondoY + 20.0}
-          << QPointF{horizonte.x() + anchoLejos * 4.05, horizonte.y()}
-          << QPointF{horizonte.x() - anchoLejos * 4.05, horizonte.y()};
+    pista << QPointF{width() / 2.0 - anchoCerca * 4.55, fondoY + 26.0}
+          << QPointF{width() / 2.0 + anchoCerca * 4.55, fondoY + 26.0}
+          << QPointF{horizonte.x() + anchoLejos * 4.55, horizonte.y()}
+          << QPointF{horizonte.x() - anchoLejos * 4.55, horizonte.y()};
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor{24, 130, 180, 54});
+    painter.setBrush(QColor{7, 38, 64, 118});
     painter.drawPolygon(pista);
 
-    painter.setPen(QPen(QColor{45, 130, 185}, 2));
-    for (double carril : {-3.5, -1.75, 0.0, 1.75, 3.5}) {
+    QPolygonF nucleoCentral;
+    nucleoCentral << QPointF{width() / 2.0 - anchoCerca * 1.3, fondoY + 26.0}
+                  << QPointF{width() / 2.0 + anchoCerca * 1.3, fondoY + 26.0}
+                  << QPointF{horizonte.x() + anchoLejos * 1.3, horizonte.y()}
+                  << QPointF{horizonte.x() - anchoLejos * 1.3, horizonte.y()};
+    painter.setBrush(QColor{20, 160, 210, 48});
+    painter.drawPolygon(nucleoCentral);
+
+    QPolygonF lateralIzquierdo;
+    lateralIzquierdo << QPointF{width() / 2.0 - anchoCerca * 4.55, fondoY + 26.0}
+                     << QPointF{width() / 2.0 - anchoCerca * 2.15, fondoY + 26.0}
+                     << QPointF{horizonte.x() - anchoLejos * 2.15, horizonte.y()}
+                     << QPointF{horizonte.x() - anchoLejos * 4.55, horizonte.y()};
+    QPolygonF lateralDerecho;
+    lateralDerecho << QPointF{width() / 2.0 + anchoCerca * 2.15, fondoY + 26.0}
+                   << QPointF{width() / 2.0 + anchoCerca * 4.55, fondoY + 26.0}
+                   << QPointF{horizonte.x() + anchoLejos * 4.55, horizonte.y()}
+                   << QPointF{horizonte.x() + anchoLejos * 2.15, horizonte.y()};
+    painter.setBrush(QColor{4, 22, 42, 105});
+    painter.drawPolygon(lateralIzquierdo);
+    painter.drawPolygon(lateralDerecho);
+
+    for (int i = 0; i < 9; ++i) {
+        const double u0 = i / 9.0;
+        const double u1 = (i + 1) / 9.0;
+        const double t0 = 1.0 - std::pow(1.0 - u0, 1.75);
+        const double t1 = 1.0 - std::pow(1.0 - u1, 1.75);
+        const double y0 = fondoY - t0 * (fondoY - horizonte.y());
+        const double y1 = fondoY - t1 * (fondoY - horizonte.y());
+        const double ancho0 = anchoCerca * 4.1 * (1.0 - t0) + anchoLejos * 4.1 * t0;
+        const double ancho1 = anchoCerca * 4.1 * (1.0 - t1) + anchoLejos * 4.1 * t1;
+        QPolygonF banda;
+        banda << QPointF{width() / 2.0 - ancho0, y0}
+              << QPointF{width() / 2.0 + ancho0, y0}
+              << QPointF{width() / 2.0 + ancho1, y1}
+              << QPointF{width() / 2.0 - ancho1, y1};
+        painter.setBrush(i % 2 == 0 ? QColor{20, 145, 190, 30} : QColor{2, 16, 32, 58});
+        painter.drawPolygon(banda);
+    }
+
+    painter.setPen(QPen(QColor{60, 190, 245}, 2));
+    for (double carril : {-3.75, -2.25, -1.05, 0.0, 1.05, 2.25, 3.75}) {
         painter.drawLine(
             QPointF{width() / 2.0 + carril * anchoCerca, fondoY + 20.0},
             QPointF{horizonte.x() + carril * anchoLejos, horizonte.y()});
     }
-    painter.setPen(QPen(QColor{70, 220, 255, 115}, 4));
-    painter.drawLine(QPointF{width() / 2.0 - anchoCerca * 4.05, fondoY + 20.0}, QPointF{horizonte.x() - anchoLejos * 4.05, horizonte.y()});
-    painter.drawLine(QPointF{width() / 2.0 + anchoCerca * 4.05, fondoY + 20.0}, QPointF{horizonte.x() + anchoLejos * 4.05, horizonte.y()});
-    painter.setPen(QPen(QColor{100, 245, 255, 135}, 2));
-    painter.drawLine(QPointF{width() / 2.0, fondoY + 20.0}, horizonte);
-    painter.setPen(QPen(QColor{35, 95, 145}, 1, Qt::DashLine));
-    for (int i = 1; i <= 7; ++i) {
-        const double t = i / 8.0;
+    painter.setPen(QPen(QColor{90, 235, 255, 150}, 5));
+    painter.drawLine(QPointF{width() / 2.0 - anchoCerca * 4.55, fondoY + 26.0}, QPointF{horizonte.x() - anchoLejos * 4.55, horizonte.y()});
+    painter.drawLine(QPointF{width() / 2.0 + anchoCerca * 4.55, fondoY + 26.0}, QPointF{horizonte.x() + anchoLejos * 4.55, horizonte.y()});
+    painter.setPen(QPen(QColor{120, 255, 255, 155}, 3));
+    painter.drawLine(QPointF{width() / 2.0, fondoY + 26.0}, horizonte);
+    painter.setPen(QPen(QColor{65, 155, 205, 145}, 1, Qt::DashLine));
+    for (int i = 1; i <= 11; ++i) {
+        const double u = i / 12.0;
+        const double t = 1.0 - std::pow(1.0 - u, 1.8);
         const double y = fondoY - t * (fondoY - horizonte.y());
-        const double ancho = anchoCerca * 3.25 * (1.0 - t) + anchoLejos * 3.25 * t;
+        const double ancho = anchoCerca * 4.25 * (1.0 - t) + anchoLejos * 4.25 * t;
         painter.drawLine(QPointF{width() / 2.0 - ancho, y}, QPointF{width() / 2.0 + ancho, y});
     }
 
     painter.setPen(Qt::NoPen);
-    if (!dibujarSpriteCentrado(painter, SpriteId::BaseSombra, jugador, QSizeF{92.0, 36.0})) {
+    painter.setBrush(QColor{60, 255, 235, 34});
+    painter.drawEllipse(jugador, 112.0, 42.0);
+    painter.setBrush(QColor{20, 255, 230, 78});
+    painter.drawEllipse(jugador, 68.0, 25.0);
+    painter.setBrush(QColor{230, 255, 255, 54});
+    painter.drawEllipse(jugador, 34.0, 13.0);
+    if (!dibujarSpriteCentrado(painter, SpriteId::BaseSombra, jugador, QSizeF{136.0, 52.0})) {
         painter.setBrush(QColor{20, 36, 58, 180});
         painter.drawEllipse(jugador, 58.0, 22.0);
     }
@@ -1103,11 +1150,14 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
 
         const QPointF centro = convertirDefensaAPantalla(disco->posicion());
         const double escala = escalaDefensa(disco->posicion());
-        const double radio = 9.0 * escala;
-        painter.setPen(QPen(QColor{255, 150, 120, 170}, 2));
+        const double radio = 10.5 * escala;
+        const int alphaLinea = static_cast<int>(std::clamp(95.0 + escala * 72.0, 95.0, 220.0));
+        painter.setPen(QPen(QColor{255, 120, 95, alphaLinea}, 1.0 + escala * 1.2));
         painter.drawLine(centro, jugador);
         painter.setPen(Qt::NoPen);
-        if (!dibujarSpriteCentrado(painter, SpriteId::DiscoEnemigo, centro, QSizeF{radio * 4.0, radio * 3.2})) {
+        painter.setBrush(QColor{255, 55, 55, static_cast<int>(35 + escala * 22.0)});
+        painter.drawEllipse(centro, radio * 2.1, radio * 1.65);
+        if (!dibujarSpriteCentrado(painter, SpriteId::DiscoEnemigo, centro, QSizeF{radio * 4.7, radio * 3.75})) {
             painter.setBrush(QColor{255, 80, 90});
             painter.drawEllipse(centro, radio, radio);
             painter.setBrush(QColor{255, 70, 80, 90});
@@ -1120,9 +1170,11 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
     if (nivel->proyectilDefensorActivo()) {
         const QPointF proyectil = convertirDefensaAPantalla(nivel->posicionProyectilDefensor());
         const double escala = escalaDefensa(nivel->posicionProyectilDefensor());
-        painter.setPen(QPen(QColor{80, 255, 235}, 3));
+        painter.setPen(QPen(QColor{80, 255, 235, 205}, 4));
         painter.drawLine(jugador, proyectil);
         painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor{80, 255, 235, 70});
+        painter.drawEllipse(proyectil, 12.0 * escala, 10.0 * escala);
         if (!dibujarSpriteCentrado(painter, SpriteId::ProyectilDefensor, proyectil, QSizeF{32.0 * escala, 24.0 * escala})) {
             painter.setBrush(QColor{110, 255, 245});
             painter.drawEllipse(proyectil, 6.0 * escala, 6.0 * escala);
@@ -1131,7 +1183,7 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
         }
     }
 
-    if (!dibujarSpriteCentrado(painter, SpriteId::JugadorDefensa, jugador, QSizeF{78.0, 78.0})) {
+    if (!dibujarSpriteCentrado(painter, SpriteId::JugadorDefensa, jugador, QSizeF{88.0, 88.0})) {
         painter.setBrush(QColor{40, 255, 210});
         painter.drawEllipse(jugador, 28.0, 28.0);
         painter.setBrush(QColor{230, 255, 245});
@@ -1141,9 +1193,9 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
     if (pulsoImpacto_.count() > 0) {
         const double progreso = progresoPulso(pulsoImpacto_, duracionPulsoImpacto);
         const QPointF centro = convertirDefensaAPantalla(posicionPulsoImpacto_);
-        if (!dibujarSpriteCentrado(painter, SpriteId::ExplosionCyan, centro, QSizeF{58.0 + progreso * 34.0, 42.0 + progreso * 24.0})) {
+        if (!dibujarSpriteCentrado(painter, SpriteId::ExplosionRoja, centro, QSizeF{62.0 + progreso * 40.0, 46.0 + progreso * 30.0})) {
             painter.setBrush(Qt::NoBrush);
-            painter.setPen(QPen(QColor{120, 255, 235, static_cast<int>(220 * (1.0 - progreso))}, 3));
+            painter.setPen(QPen(QColor{255, 110, 95, static_cast<int>(230 * (1.0 - progreso))}, 3));
             painter.drawEllipse(centro, 10.0 + progreso * 36.0, 10.0 + progreso * 36.0);
             painter.setPen(Qt::NoPen);
         }
