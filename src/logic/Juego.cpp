@@ -126,38 +126,38 @@ void Juego::limpiarEntidadesDeNivel() {
 }
 
 void Juego::configurarNivelRutaTransmision() {
-    jugador_ = Jugador{Posicion{0.0F, 2.0F}};
-    discoJugador_ = Disco{Posicion{0.0F, 2.0F}};
+    jugador_ = Jugador{Posicion{0.0F, 2.8F}};
+    discoJugador_ = Disco{Posicion{0.0F, 2.8F}};
 
     auto nivel = std::make_unique<NivelRutaTransmision>(jugador_, discoJugador_);
 
-    nivel->agregarTramo({"INICIO", 0.0F, 3.35F, 0.95F, 3.25F});
-    nivel->agregarTramo({"DESCENSO", 3.75F, 9.9F, -3.35F, 2.65F});
-    nivel->agregarTramo({"SUBIDA", 10.2F, 15.95F, -3.25F, 2.55F});
-    nivel->agregarTramo({"REBOTE A CP4", 16.0F, 19.3F, -3.15F, 2.45F});
-    nivel->agregarTramo({"DOBLE REBOTE", 16.0F, 24.7F, -3.45F, -0.75F});
-    nivel->agregarTramo({"FINAL", 25.2F, 30.75F, -3.35F, -0.4F});
+    nivel->agregarTramo({"TRAMO A", 0.0F, 5.55F, 1.45F, 4.55F});
+    nivel->agregarTramo({"TRAMO B", 5.9F, 11.45F, -3.75F, 3.15F});
+    nivel->agregarTramo({"TRAMO C", 11.8F, 17.85F, -3.65F, 3.15F});
+    nivel->agregarTramo({"TRAMO D", 18.15F, 22.4F, -3.65F, 3.1F});
+    nivel->agregarTramo({"TRAMO E", 19.55F, 32.25F, -3.95F, -0.65F});
+    nivel->agregarTramo({"TRAMO F", 32.6F, 39.45F, -3.85F, -0.75F});
 
     // Fases 2, 3, 4, 5 y 6: cinco nodos obligatorios antes del nodo central.
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-1",
-        Posicion{4.75F, 2.0F},
+        Posicion{5.2F, 2.8F},
         5400ms));
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-2",
-        Posicion{9.35F, -2.85F},
+        Posicion{11.0F, -3.2F},
         6200ms));
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-3",
-        Posicion{15.8F, 1.8F},
+        Posicion{17.5F, 2.8F},
         6500ms));
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-4",
-        Posicion{16.2F, -2.4F},
+        Posicion{20.0F, -4.25F},
         7200ms));
     checkpoints_.push_back(std::make_unique<Checkpoint>(
         "checkpoint-5",
-        Posicion{24.2F, -2.65F},
+        Posicion{30.4F, -2.25F},
         7000ms));
 
     for (const auto& checkpoint : checkpoints_) {
@@ -166,96 +166,84 @@ void Juego::configurarNivelRutaTransmision() {
 
     metaFinal_ = std::make_unique<NodoCentralEnergia>(
         "nodo-central",
-        Posicion{30.1F, -2.55F},
+        Posicion{39.0F, -2.8F},
         6500ms);
     nivel->establecerMetaFinal(*metaFinal_);
 
     // Fase 1: compuerta de entrada con dos puertas verticales.
     obstaculos_.push_back(std::make_unique<BarreraMovil>(
-        Posicion{2.45F, 3.2F},
-        Posicion{2.45F, 2.35F},
-        1.15F,
-        0.5F));
+        Posicion{2.55F, 4.5F},
+        Posicion{2.55F, 3.25F},
+        1.35F,
+        0.42F));
     obstaculos_.push_back(std::make_unique<BarreraMovil>(
-        Posicion{2.45F, 0.8F},
-        Posicion{2.45F, 1.65F},
-        1.15F,
-        0.5F));
+        Posicion{2.55F, 1.1F},
+        Posicion{2.55F, 2.35F},
+        1.35F,
+        0.42F));
 
     // Fase 3: compuerta lateral en la subida hacia el checkpoint 3.
     obstaculos_.push_back(std::make_unique<BarreraMovil>(
-        Posicion{13.25F, 0.7F},
-        Posicion{12.25F, 0.7F},
-        0.75F,
-        0.46F));
+        Posicion{15.1F, 0.45F},
+        Posicion{13.1F, 0.45F},
+        1.1F,
+        0.38F));
     obstaculos_.push_back(std::make_unique<BarreraMovil>(
-        Posicion{14.15F, 1.2F},
-        Posicion{15.15F, 1.2F},
-        0.75F,
-        0.46F));
+        Posicion{16.1F, 1.25F},
+        Posicion{18.1F, 1.25F},
+        1.1F,
+        0.38F));
 
     // Fase 4: bloqueos que cierran el tiro directo desde checkpoint 3 hacia checkpoint 4.
     obstaculos_.push_back(std::make_unique<BarreraEstatica>(
-        Posicion{15.95F, 0.05F},
-        0.42F));
-    obstaculos_.push_back(std::make_unique<BarreraEstatica>(
-        Posicion{16.25F, -1.05F},
-        0.42F));
-
-    // Fase 5: bloqueos que hacen necesaria la ruta de doble rebote hacia checkpoint 5.
-    obstaculos_.push_back(std::make_unique<BarreraEstatica>(
-        Posicion{19.8F, -2.35F},
-        0.38F));
-    obstaculos_.push_back(std::make_unique<BarreraEstatica>(
-        Posicion{21.75F, -2.55F},
-        0.38F));
-
+        Posicion{18.5F, 0.25F},
+        0.16F));
     // Fase 4: pared vertical rosada para rebotar desde checkpoint 3 hacia checkpoint 4.
     obstaculos_.push_back(std::make_unique<SuperficieRebote>(
-        Posicion{18.4F, 0.2F},
+        Posicion{23.0F, -1.31F},
         Posicion{-1.0F, 0.0F},
-        0.86F));
+        0.66F));
 
     // Fase 5: rebote consecutivo para salir de checkpoint 4 hacia checkpoint 5.
     obstaculos_.push_back(std::make_unique<SuperficieRebote>(
-        Posicion{18.7F, -1.35F},
-        Posicion{0.13F, 0.99F},
-        0.78F));
+        Posicion{25.15F, -0.95F},
+        Posicion{0.223F, 0.975F},
+        0.85F));
     obstaculos_.push_back(std::make_unique<SuperficieRebote>(
-        Posicion{21.0F, -3.1F},
-        Posicion{0.25F, 0.97F},
-        0.78F));
+        Posicion{26.75F, -3.55F},
+        Posicion{-0.332F, -0.943F},
+        0.85F));
 
     for (const auto& obstaculo : obstaculos_) {
         nivel->agregarObstaculo(*obstaculo);
     }
 
     // Fase 2: dos drones verticales despues de checkpoint 1 hacia checkpoint 2.
-    drones_.push_back(std::make_unique<Dron>(Posicion{6.65F, -0.35F}, 1.3F));
+    drones_.push_back(std::make_unique<Dron>(Posicion{6.8F, 2.0F}, 1.3F));
     drones_.back()->definirRutaVigilancia({
-        Posicion{6.65F, 1.25F},
-        Posicion{6.65F, -2.35F}
+        Posicion{6.8F, 2.0F},
+        Posicion{6.8F, -2.55F}
     });
-    drones_.push_back(std::make_unique<Dron>(Posicion{8.05F, -2.35F}, 1.35F));
+    drones_.push_back(std::make_unique<Dron>(Posicion{8.7F, -2.55F}, 1.35F));
     drones_.back()->definirRutaVigilancia({
-        Posicion{8.05F, -2.35F},
-        Posicion{8.05F, 1.05F}
+        Posicion{8.7F, -2.55F},
+        Posicion{8.7F, 1.8F}
     });
 
     // Fase 3: dron horizontal en la subida desde checkpoint 2.
-    drones_.push_back(std::make_unique<Dron>(Posicion{11.2F, -0.45F}, 1.35F));
+    drones_.push_back(std::make_unique<Dron>(Posicion{13.0F, -1.05F}, 1.35F));
     drones_.back()->definirRutaVigilancia({
-        Posicion{10.55F, -0.45F},
-        Posicion{12.55F, -0.45F}
+        Posicion{12.0F, -1.05F},
+        Posicion{14.0F, -1.05F}
     });
 
     // Fase 6: defensor rojo final, restringido al acceso del nodo central.
-    drones_.push_back(std::make_unique<Dron>(Posicion{28.25F, -2.55F}, 2.05F));
+    drones_.push_back(std::make_unique<Dron>(Posicion{35.2F, -2.8F}, 2.05F));
     drones_.back()->definirRutaVigilancia({
-        Posicion{27.65F, -1.55F},
-        Posicion{28.95F, -3.05F},
-        Posicion{27.65F, -3.05F},
-        Posicion{28.95F, -1.55F}
+        Posicion{34.35F, -1.55F},
+        Posicion{36.05F, -3.35F},
+        Posicion{34.35F, -3.35F},
+        Posicion{36.05F, -1.55F}
     });
 
     for (const auto& dron : drones_) {

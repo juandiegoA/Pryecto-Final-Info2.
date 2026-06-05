@@ -6,4 +6,8 @@
         <file alias="victory.wav">../assets/audio/victory.wav</file>
         <file alias="defeat.wav">../assets/audio/defeat.wav</file>
     </qresource>
+    <qresource prefix="/sprites">
+        <file alias="sheet_level1.png">../assets/sprites/sheet_level1.png</file>
+        <file alias="sheet_level2.png">../assets/sprites/sheet_level2.png</file>
+    </qresource>
 </RCC>

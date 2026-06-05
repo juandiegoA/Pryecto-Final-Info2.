@@ -11,6 +11,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QPixmap>
 #include <QPolygonF>
 #include <QString>
 #include <QSoundEffect>
@@ -32,13 +33,13 @@ constexpr int altoMinimoVentana = 450;
 constexpr int intervaloActualizacionMs = 16;
 constexpr int separacionGrid = 40;
 
-constexpr double escalaRuta = 26.0;
-constexpr double origenRutaX = 42.0;
+constexpr double escalaRuta = 21.5;
+constexpr double origenRutaX = 36.0;
 constexpr double profundidadMaximaDefensa = 10.5;
-constexpr double margenInferiorDefensa = 82.0;
+constexpr double margenInferiorDefensa = 58.0;
 constexpr double horizonteDefensaY = 92.0;
-constexpr double anchoCarrilDefensa = 54.0;
-constexpr double variacionCarrilDefensa = 18.0;
+constexpr double anchoCarrilDefensa = 34.0;
+constexpr double variacionCarrilDefensa = 50.0;
 
 constexpr double anchoBotonMenu = 280.0;
 constexpr double altoBotonMenu = 42.0;
@@ -56,9 +57,160 @@ constexpr const char* audioImpacto = "qrc:/audio/destroy_enemy.wav";
 constexpr const char* audioVictoria = "qrc:/audio/victory.wav";
 constexpr const char* audioDerrota = "qrc:/audio/defeat.wav";
 
+enum class SpriteSheet {
+    Nivel1,
+    Nivel2
+};
+
+enum class SpriteId {
+    JugadorRuta,
+    DiscoJugador,
+    Checkpoint,
+    Nucleo,
+    DronAzul,
+    DronRojo,
+    CompuertaVertical,
+    CompuertaHorizontal,
+    PanelDelgado,
+    ReboteMagenta,
+    PulsoCyan,
+    ExplosionCyan,
+    ExplosionRoja,
+    JugadorDefensa,
+    DiscoEnemigo,
+    ProyectilDefensor,
+    Reticula,
+    CarrilDefensa,
+    BotonNeon,
+    Victoria,
+    Derrota,
+    BaseSombra
+};
+
 constexpr auto duracionPulsoCheckpoint = std::chrono::milliseconds{620};
 constexpr auto duracionPulsoImpacto = std::chrono::milliseconds{460};
 constexpr auto duracionPulsoFinal = std::chrono::milliseconds{1200};
+
+QPixmap& hojaSprites(SpriteSheet hoja) {
+    static QPixmap hojaNivel1{":/sprites/sheet_level1.png"};
+    static QPixmap hojaNivel2{":/sprites/sheet_level2.png"};
+    return hoja == SpriteSheet::Nivel1 ? hojaNivel1 : hojaNivel2;
+}
+
+QRectF celdaSprite(SpriteSheet hoja, int columna, int fila) {
+    const QPixmap& pixmap = hojaSprites(hoja);
+    if (pixmap.isNull()) {
+        return QRectF{};
+    }
+
+    constexpr int columnas = 4;
+    constexpr int filas = 3;
+    const double ancho = pixmap.width() / static_cast<double>(columnas);
+    const double alto = pixmap.height() / static_cast<double>(filas);
+    const double margenX = ancho * 0.08;
+    const double margenY = alto * 0.08;
+    return QRectF{
+        columna * ancho + margenX,
+        fila * alto + margenY,
+        ancho - margenX * 2.0,
+        alto - margenY * 2.0};
+}
+
+SpriteSheet hojaDeSprite(SpriteId sprite) {
+    switch (sprite) {
+    case SpriteId::JugadorRuta:
+    case SpriteId::DiscoJugador:
+    case SpriteId::DiscoEnemigo:
+    case SpriteId::ExplosionCyan:
+    case SpriteId::ExplosionRoja:
+    case SpriteId::Reticula:
+    case SpriteId::CarrilDefensa:
+    case SpriteId::BotonNeon:
+    case SpriteId::Victoria:
+    case SpriteId::Derrota:
+    case SpriteId::BaseSombra:
+        return SpriteSheet::Nivel1;
+    default:
+        return SpriteSheet::Nivel2;
+    }
+}
+
+QRectF recorteSprite(SpriteId sprite) {
+    const SpriteSheet hoja = hojaDeSprite(sprite);
+    switch (sprite) {
+    case SpriteId::JugadorRuta:
+        return celdaSprite(hoja, 0, 0);
+    case SpriteId::DiscoJugador:
+        return celdaSprite(hoja, 2, 0);
+    case SpriteId::ProyectilDefensor:
+        return celdaSprite(hoja, 1, 0);
+    case SpriteId::Checkpoint:
+        return celdaSprite(hoja, 2, 0);
+    case SpriteId::Nucleo:
+        return celdaSprite(hoja, 3, 0);
+    case SpriteId::DronAzul:
+        return celdaSprite(hoja, 0, 1);
+    case SpriteId::DronRojo:
+        return celdaSprite(hoja, 1, 1);
+    case SpriteId::CompuertaVertical:
+        return celdaSprite(hoja, 2, 1);
+    case SpriteId::CompuertaHorizontal:
+        return celdaSprite(hoja, 3, 1);
+    case SpriteId::PanelDelgado:
+        return celdaSprite(hoja, 0, 2);
+    case SpriteId::ReboteMagenta:
+        return celdaSprite(hoja, 1, 2);
+    case SpriteId::PulsoCyan:
+        return celdaSprite(hoja, 3, 2);
+    case SpriteId::ExplosionCyan:
+        return celdaSprite(hoja, 0, 1);
+    case SpriteId::ExplosionRoja:
+        return celdaSprite(hoja, 1, 1);
+    case SpriteId::JugadorDefensa:
+        return celdaSprite(hoja, 0, 0);
+    case SpriteId::DiscoEnemigo:
+        return celdaSprite(SpriteSheet::Nivel1, 1, 0);
+    case SpriteId::Reticula:
+        return celdaSprite(hoja, 2, 1);
+    case SpriteId::CarrilDefensa:
+        return celdaSprite(hoja, 3, 2);
+    case SpriteId::BotonNeon:
+        return celdaSprite(hoja, 3, 1);
+    case SpriteId::Victoria:
+        return celdaSprite(hoja, 0, 2);
+    case SpriteId::Derrota:
+        return celdaSprite(hoja, 1, 2);
+    case SpriteId::BaseSombra:
+        return celdaSprite(hoja, 2, 2);
+    }
+
+    return QRectF{};
+}
+
+bool dibujarSpriteEnRect(QPainter& painter, SpriteId sprite, const QRectF& destino) {
+    QPixmap& hoja = hojaSprites(hojaDeSprite(sprite));
+    const QRectF origen = recorteSprite(sprite);
+    if (hoja.isNull() || origen.isNull() || destino.isNull()) {
+        return false;
+    }
+
+    const double escala = std::min(destino.width() / origen.width(), destino.height() / origen.height());
+    const QSizeF ajustado{origen.width() * escala, origen.height() * escala};
+    const QRectF destinoAjustado{
+        destino.center().x() - ajustado.width() / 2.0,
+        destino.center().y() - ajustado.height() / 2.0,
+        ajustado.width(),
+        ajustado.height()};
+    painter.drawPixmap(destinoAjustado, hoja, origen);
+    return true;
+}
+
+bool dibujarSpriteCentrado(QPainter& painter, SpriteId sprite, const QPointF& centro, const QSizeF& tamano) {
+    return dibujarSpriteEnRect(
+        painter,
+        sprite,
+        QRectF{centro.x() - tamano.width() / 2.0, centro.y() - tamano.height() / 2.0, tamano.width(), tamano.height()});
+}
 
 double progresoPulso(std::chrono::milliseconds restante, std::chrono::milliseconds duracion) {
     if (duracion.count() <= 0) {
@@ -181,6 +333,7 @@ void MainWindow::paintEvent(QPaintEvent* event) {
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
     dibujarFondo(painter);
 
     if (pantalla_ == Pantalla::Menu) {
@@ -232,7 +385,7 @@ Posicion MainWindow::convertirDefensaALogica(const QPointF& punto) const {
 
 double MainWindow::escalaDefensa(const Posicion& posicion) const {
     const double t = std::clamp(static_cast<double>(posicion.y()) / profundidadMaximaDefensa, 0.0, 1.0);
-    return 0.58 + (1.0 - t) * 0.72;
+    return 0.42 + (1.0 - t) * 0.95;
 }
 
 QRectF MainWindow::botonNivel1() const {
@@ -488,7 +641,7 @@ void MainWindow::lanzarDiscoHacia(const Posicion& destino) {
 
     ultimoObjetivo_ = destino;
     tieneObjetivo_ = true;
-    juego_.discoJugador().lanzarDesde(origen, direccion, 3.5F);
+    juego_.discoJugador().lanzarDesde(origen, direccion, 4.2F);
 }
 
 void MainWindow::defenderEn(const Posicion& objetivo) {
@@ -501,7 +654,19 @@ void MainWindow::defenderEn(const Posicion& objetivo) {
 }
 
 void MainWindow::dibujarFondo(QPainter& painter) const {
-    painter.fillRect(rect(), QColor{12, 16, 28});
+    const bool defensa = dynamic_cast<const NivelDefensaNucleo*>(juego_.nivelActual()) != nullptr;
+    painter.fillRect(rect(), defensa ? QColor{5, 10, 20} : QColor{12, 16, 28});
+
+    if (defensa) {
+        painter.setPen(QPen(QColor{18, 80, 118, 95}, 1));
+        const int horizonte = static_cast<int>(horizonteDefensaY);
+        for (int y = horizonte; y < height(); y += separacionGrid * 2) {
+            painter.drawLine(0, y, width(), y);
+        }
+        painter.setPen(QPen(QColor{16, 60, 92, 70}, 1));
+        painter.drawLine(0, horizonte, width(), horizonte);
+        return;
+    }
 
     painter.setPen(QPen(QColor{30, 180, 220}, 1));
     for (int x = separacionGrid; x < width(); x += separacionGrid) {
@@ -611,7 +776,7 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
         return QRectF{superiorIzquierda, inferiorDerecha}.normalized();
     };
 
-    const QRectF carrilSuperior = rectLogico(0.25, 0.95, 16.2, 3.25);
+    const QRectF carrilSuperior = rectLogico(0.25, 1.45, 18.1, 4.55);
     painter.setPen(QPen(QColor{80, 240, 255, 120}, 2));
     painter.setBrush(QColor{20, 80, 105, 55});
     painter.drawRoundedRect(carrilSuperior, 12.0, 12.0);
@@ -620,9 +785,9 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
     painter.drawText(
         carrilSuperior.adjusted(8.0, 5.0, -8.0, -5.0),
         Qt::AlignTop | Qt::AlignLeft,
-        "INICIO / SUBIDA");
+        "TRAMOS A / C");
 
-    const QRectF carrilInferior = rectLogico(6.4, -3.55, 30.75, -0.4);
+    const QRectF carrilInferior = rectLogico(5.9, -3.85, 39.45, -0.65);
     painter.setPen(QPen(QColor{255, 90, 205, 105}, 2));
     painter.setBrush(QColor{92, 24, 86, 58});
     painter.drawRoundedRect(carrilInferior, 12.0, 12.0);
@@ -631,7 +796,7 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
     painter.drawText(
         carrilInferior.adjusted(8.0, 5.0, -8.0, -5.0),
         Qt::AlignTop | Qt::AlignLeft,
-        "DESCENSO / FINAL");
+        "TRAMOS B / E / F");
 
     const auto dibujarZona = [&painter, &rectLogico](const TramoRutaTransmision& tramo, const QColor& color) {
         const QRectF zona = rectLogico(tramo.inicioX, tramo.minimoY, tramo.finX, tramo.maximoY);
@@ -692,17 +857,21 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
         if (pulsoCheckpoint_.count() > 0
             && checkpoint->posicion().distanciaA(posicionPulsoCheckpoint_) <= 0.01F) {
             const double progreso = progresoPulso(pulsoCheckpoint_, duracionPulsoCheckpoint);
-            painter.setBrush(Qt::NoBrush);
-            painter.setPen(QPen(QColor{100, 255, 190, static_cast<int>(190 * (1.0 - progreso))}, 3));
-            painter.drawEllipse(centro, 16.0 + progreso * 28.0, 16.0 + progreso * 28.0);
-            painter.setPen(Qt::NoPen);
+            if (!dibujarSpriteCentrado(painter, SpriteId::PulsoCyan, centro, QSizeF{60.0 + progreso * 42.0, 48.0 + progreso * 34.0})) {
+                painter.setBrush(Qt::NoBrush);
+                painter.setPen(QPen(QColor{100, 255, 190, static_cast<int>(190 * (1.0 - progreso))}, 3));
+                painter.drawEllipse(centro, 16.0 + progreso * 28.0, 16.0 + progreso * 28.0);
+                painter.setPen(Qt::NoPen);
+            }
         }
-        painter.setBrush(checkpoint->estaActivado()
-            ? QColor{70, 230, 140}
-            : QColor{240, 200, 70});
-        painter.drawEllipse(centro, 12.0, 12.0);
-        painter.setBrush(QColor{245, 255, 255});
-        painter.drawEllipse(centro, 4.0, 4.0);
+        if (!dibujarSpriteCentrado(painter, SpriteId::Checkpoint, centro, QSizeF{44.0, 44.0})) {
+            painter.setBrush(checkpoint->estaActivado()
+                ? QColor{70, 230, 140}
+                : QColor{240, 200, 70});
+            painter.drawEllipse(centro, 12.0, 12.0);
+            painter.setBrush(QColor{245, 255, 255});
+            painter.drawEllipse(centro, 4.0, 4.0);
+        }
         painter.setPen(QColor{8, 20, 30});
         painter.setFont(QFont{"Arial", 8, QFont::Bold});
         painter.drawText(QRectF{centro.x() - 8.0, centro.y() - 8.0, 16.0, 16.0}, Qt::AlignCenter, QString::number(indiceCheckpoint));
@@ -712,17 +881,19 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
 
     if (const NodoCentralEnergia* meta = nivel->metaFinal()) {
         const QPointF centro = convertirAPantalla(meta->posicion());
-        QPolygonF rombo;
-        rombo << QPointF{centro.x(), centro.y() - 18.0}
-              << QPointF{centro.x() + 18.0, centro.y()}
-              << QPointF{centro.x(), centro.y() + 18.0}
-              << QPointF{centro.x() - 18.0, centro.y()};
-        painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(QColor{210, 120, 255, 120}, 4));
-        painter.drawEllipse(centro, 30.0, 30.0);
-        painter.setPen(QPen(QColor{235, 200, 255}, 2));
-        painter.setBrush(QColor{180, 90, 255});
-        painter.drawPolygon(rombo);
+        if (!dibujarSpriteCentrado(painter, SpriteId::Nucleo, centro, QSizeF{74.0, 74.0})) {
+            QPolygonF rombo;
+            rombo << QPointF{centro.x(), centro.y() - 18.0}
+                  << QPointF{centro.x() + 18.0, centro.y()}
+                  << QPointF{centro.x(), centro.y() + 18.0}
+                  << QPointF{centro.x() - 18.0, centro.y()};
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(QColor{210, 120, 255, 120}, 4));
+            painter.drawEllipse(centro, 30.0, 30.0);
+            painter.setPen(QPen(QColor{235, 200, 255}, 2));
+            painter.setBrush(QColor{180, 90, 255});
+            painter.drawPolygon(rombo);
+        }
         painter.setPen(QColor{245, 230, 255});
         painter.setFont(QFont{"Arial", 8, QFont::Bold});
         painter.drawText(QRectF{centro.x() - 32.0, centro.y() + 22.0, 64.0, 16.0}, Qt::AlignCenter, "NUCLEO");
@@ -732,14 +903,16 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
     for (const Obstaculo* obstaculo : nivel->obtenerObstaculos()) {
         if (const auto* barrera = dynamic_cast<const BarreraEstatica*>(obstaculo)) {
             const QPointF centro = convertirAPantalla(barrera->posicion());
-            painter.setBrush(QColor{230, 70, 70});
-            painter.drawRect(QRectF{centro.x() - 14.0, centro.y() - 28.0, 28.0, 56.0});
+            if (!dibujarSpriteCentrado(painter, SpriteId::PanelDelgado, centro, QSizeF{16.0, 42.0})) {
+                painter.setBrush(QColor{230, 70, 70});
+                painter.drawRoundedRect(QRectF{centro.x() - 5.0, centro.y() - 16.0, 10.0, 32.0}, 3.0, 3.0);
+            }
         } else if (const auto* barrera = dynamic_cast<const BarreraMovil*>(obstaculo)) {
             const QPointF centro = convertirAPantalla(barrera->posicion());
             const bool compuerta = barrera->posicion().x() < 3.2F;
             const bool puertaHorizontal =
-                barrera->posicion().x() > 12.0F && barrera->posicion().x() < 15.3F
-                && barrera->posicion().y() > 0.5F && barrera->posicion().y() < 1.4F;
+                barrera->posicion().x() > 12.8F && barrera->posicion().x() < 18.35F
+                && barrera->posicion().y() > 0.15F && barrera->posicion().y() < 1.4F;
             const QColor colorBase = compuerta ? QColor{85, 255, 230} : QColor{95, 210, 255};
             if (compuerta) {
                 painter.setBrush(Qt::NoBrush);
@@ -748,16 +921,22 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
                 painter.drawLine(QPointF{centro.x() + 26.0, centro.y() - 30.0}, QPointF{centro.x() + 26.0, centro.y() + 30.0});
                 painter.setPen(Qt::NoPen);
             }
-            painter.setBrush(colorBase);
-            painter.drawRoundedRect(puertaHorizontal
-                ? QRectF{centro.x() - 32.0, centro.y() - 11.0, 64.0, 22.0}
-                : QRectF{centro.x() - 18.0, centro.y() - 26.0, 36.0, 52.0},
-                6.0,
-                6.0);
-            painter.setBrush(QColor{225, 255, 255});
-            painter.drawRect(puertaHorizontal
-                ? QRectF{centro.x() - 26.0, centro.y() - 3.0, 52.0, 6.0}
-                : QRectF{centro.x() - 4.0, centro.y() - 20.0, 8.0, 40.0});
+            if (!dibujarSpriteCentrado(
+                    painter,
+                    puertaHorizontal ? SpriteId::CompuertaHorizontal : SpriteId::CompuertaVertical,
+                    centro,
+                    puertaHorizontal ? QSizeF{74.0, 30.0} : QSizeF{42.0, 74.0})) {
+                painter.setBrush(colorBase);
+                painter.drawRoundedRect(puertaHorizontal
+                    ? QRectF{centro.x() - 32.0, centro.y() - 11.0, 64.0, 22.0}
+                    : QRectF{centro.x() - 18.0, centro.y() - 26.0, 36.0, 52.0},
+                    6.0,
+                    6.0);
+                painter.setBrush(QColor{225, 255, 255});
+                painter.drawRect(puertaHorizontal
+                    ? QRectF{centro.x() - 26.0, centro.y() - 3.0, 52.0, 6.0}
+                    : QRectF{centro.x() - 4.0, centro.y() - 20.0, 8.0, 40.0});
+            }
         } else if (const auto* barrera = dynamic_cast<const BarreraTemporizada*>(obstaculo)) {
             const QPointF centro = convertirAPantalla(barrera->posicion());
             painter.setBrush(barrera->estaActivo()
@@ -767,16 +946,18 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
         } else if (const auto* rebote = dynamic_cast<const SuperficieRebote*>(obstaculo)) {
             const QPointF centro = convertirAPantalla(rebote->posicion());
             const bool paredVertical = std::abs(rebote->normal().x()) > std::abs(rebote->normal().y());
-            painter.setBrush(QColor{255, 60, 210, 70});
-            painter.drawEllipse(centro, paredVertical ? 18.0 : 30.0, paredVertical ? 30.0 : 18.0);
-            painter.setBrush(QColor{255, 80, 210});
-            painter.drawRoundedRect(paredVertical
-                ? QRectF{centro.x() - 9.0, centro.y() - 34.0, 18.0, 68.0}
-                : QRectF{centro.x() - 28.0, centro.y() - 9.0, 56.0, 18.0},
-                8.0,
-                8.0);
-            painter.setBrush(QColor{255, 190, 240});
-            painter.drawEllipse(centro, 5.0, 5.0);
+            if (!dibujarSpriteCentrado(painter, SpriteId::ReboteMagenta, centro, paredVertical ? QSizeF{34.0, 82.0} : QSizeF{82.0, 34.0})) {
+                painter.setBrush(QColor{255, 60, 210, 70});
+                painter.drawEllipse(centro, paredVertical ? 18.0 : 30.0, paredVertical ? 30.0 : 18.0);
+                painter.setBrush(QColor{255, 80, 210});
+                painter.drawRoundedRect(paredVertical
+                    ? QRectF{centro.x() - 9.0, centro.y() - 34.0, 18.0, 68.0}
+                    : QRectF{centro.x() - 28.0, centro.y() - 9.0, 56.0, 18.0},
+                    8.0,
+                    8.0);
+                painter.setBrush(QColor{255, 190, 240});
+                painter.drawEllipse(centro, 5.0, 5.0);
+            }
             const QPointF normal = convertirAPantalla(Posicion{
                 rebote->posicion().x() + rebote->normal().x() * 0.55F,
                 rebote->posicion().y() + rebote->normal().y() * 0.55F});
@@ -804,13 +985,13 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
             painter.setPen(Qt::NoPen);
         }
 
-        painter.setBrush(dronFinal ? QColor{255, 60, 70, 85} : QColor{80, 180, 255, 65});
-        painter.drawEllipse(centro, dronFinal ? 24.0 : 17.0, dronFinal ? 24.0 : 17.0);
-        painter.setBrush(dronFinal ? QColor{255, 60, 70} : QColor{80, 180, 255});
-        painter.drawEllipse(centro, dronFinal ? 14.0 : 10.5, dronFinal ? 14.0 : 10.5);
+        if (!dibujarSpriteCentrado(painter, dronFinal ? SpriteId::DronRojo : SpriteId::DronAzul, centro, dronFinal ? QSizeF{54.0, 54.0} : QSizeF{42.0, 42.0})) {
+            painter.setBrush(dronFinal ? QColor{255, 60, 70, 85} : QColor{80, 180, 255, 65});
+            painter.drawEllipse(centro, dronFinal ? 24.0 : 17.0, dronFinal ? 24.0 : 17.0);
+            painter.setBrush(dronFinal ? QColor{255, 60, 70} : QColor{80, 180, 255});
+            painter.drawEllipse(centro, dronFinal ? 14.0 : 10.5, dronFinal ? 14.0 : 10.5);
+        }
         if (dronFinal) {
-            painter.setBrush(QColor{255, 160, 160});
-            painter.drawEllipse(centro, 5.0, 5.0);
             painter.setPen(QColor{255, 180, 180});
             painter.setFont(QFont{"Arial", 8, QFont::Bold});
             painter.drawText(QRectF{centro.x() - 34.0, centro.y() - 33.0, 68.0, 14.0}, Qt::AlignCenter, "DEFENSOR");
@@ -831,19 +1012,23 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
         painter.setPen(Qt::NoPen);
     }
 
-    painter.setBrush(QColor{40, 255, 210});
-    painter.drawEllipse(jugador, 16.0, 16.0);
-    painter.setBrush(QColor{220, 255, 245});
-    painter.drawEllipse(jugador, 5.0, 5.0);
+    if (!dibujarSpriteCentrado(painter, SpriteId::JugadorRuta, jugador, QSizeF{64.0, 82.0})) {
+        painter.setBrush(QColor{40, 255, 210});
+        painter.drawEllipse(jugador, 16.0, 16.0);
+        painter.setBrush(QColor{220, 255, 245});
+        painter.drawEllipse(jugador, 5.0, 5.0);
+    }
 
     const QPointF disco = convertirAPantalla(juego_.discoJugador().posicion());
-    painter.setBrush(juego_.discoJugador().estaActivo()
-        ? QColor{255, 255, 255}
-        : QColor{130, 140, 150});
-    painter.drawEllipse(disco, 8.0, 8.0);
-    if (juego_.discoJugador().estaActivo()) {
-        painter.setBrush(QColor{80, 240, 255, 160});
-        painter.drawEllipse(disco, 14.0, 14.0);
+    if (!dibujarSpriteCentrado(painter, SpriteId::DiscoJugador, disco, juego_.discoJugador().estaActivo() ? QSizeF{34.0, 26.0} : QSizeF{24.0, 18.0})) {
+        painter.setBrush(juego_.discoJugador().estaActivo()
+            ? QColor{255, 255, 255}
+            : QColor{130, 140, 150});
+        painter.drawEllipse(disco, 8.0, 8.0);
+        if (juego_.discoJugador().estaActivo()) {
+            painter.setBrush(QColor{80, 240, 255, 160});
+            painter.drawEllipse(disco, 14.0, 14.0);
+        }
     }
 }
 
@@ -855,32 +1040,48 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
 
     const QPointF jugador = convertirDefensaAPantalla(juego_.jugador().posicion());
 
-    const QPointF horizonte{width() / 2.0, 92.0};
+    const QPointF horizonte{width() / 2.0, horizonteDefensaY};
+    const double fondoY = height() - margenInferiorDefensa;
+    const double anchoCerca = anchoCarrilDefensa + variacionCarrilDefensa;
+    const double anchoLejos = anchoCarrilDefensa * 0.35;
+
+    QPolygonF pista;
+    pista << QPointF{width() / 2.0 - anchoCerca * 4.05, fondoY + 20.0}
+          << QPointF{width() / 2.0 + anchoCerca * 4.05, fondoY + 20.0}
+          << QPointF{horizonte.x() + anchoLejos * 4.05, horizonte.y()}
+          << QPointF{horizonte.x() - anchoLejos * 4.05, horizonte.y()};
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor{24, 130, 180, 54});
+    painter.drawPolygon(pista);
+
     painter.setPen(QPen(QColor{45, 130, 185}, 2));
     for (double carril : {-3.5, -1.75, 0.0, 1.75, 3.5}) {
         painter.drawLine(
-            QPointF{width() / 2.0 + carril * 72.0, height() - 40.0},
-            QPointF{horizonte.x() + carril * 9.0, horizonte.y()});
+            QPointF{width() / 2.0 + carril * anchoCerca, fondoY + 20.0},
+            QPointF{horizonte.x() + carril * anchoLejos, horizonte.y()});
     }
+    painter.setPen(QPen(QColor{70, 220, 255, 115}, 4));
+    painter.drawLine(QPointF{width() / 2.0 - anchoCerca * 4.05, fondoY + 20.0}, QPointF{horizonte.x() - anchoLejos * 4.05, horizonte.y()});
+    painter.drawLine(QPointF{width() / 2.0 + anchoCerca * 4.05, fondoY + 20.0}, QPointF{horizonte.x() + anchoLejos * 4.05, horizonte.y()});
+    painter.setPen(QPen(QColor{100, 245, 255, 135}, 2));
+    painter.drawLine(QPointF{width() / 2.0, fondoY + 20.0}, horizonte);
     painter.setPen(QPen(QColor{35, 95, 145}, 1, Qt::DashLine));
-    for (int i = 1; i <= 6; ++i) {
-        const double t = i / 7.0;
-        const double y = height() - 82.0 - t * (height() - 174.0);
-        const double ancho = 260.0 * (1.0 - t) + 34.0 * t;
+    for (int i = 1; i <= 7; ++i) {
+        const double t = i / 8.0;
+        const double y = fondoY - t * (fondoY - horizonte.y());
+        const double ancho = anchoCerca * 3.25 * (1.0 - t) + anchoLejos * 3.25 * t;
         painter.drawLine(QPointF{width() / 2.0 - ancho, y}, QPointF{width() / 2.0 + ancho, y});
     }
 
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor{20, 36, 58, 180});
-    painter.drawEllipse(jugador, 58.0, 22.0);
-    painter.setBrush(QColor{40, 255, 210});
-    painter.drawEllipse(jugador, 20.0, 20.0);
-    painter.setBrush(QColor{230, 255, 245});
-    painter.drawEllipse(jugador, 6.0, 6.0);
+    if (!dibujarSpriteCentrado(painter, SpriteId::BaseSombra, jugador, QSizeF{92.0, 36.0})) {
+        painter.setBrush(QColor{20, 36, 58, 180});
+        painter.drawEllipse(jugador, 58.0, 22.0);
+    }
 
     std::vector<const DiscoEnemigo*> discosOrdenados;
     for (const DiscoEnemigo* disco : nivel->obtenerDiscosEnemigos()) {
-        if (disco != nullptr) {
+        if (disco != nullptr && !disco->estaDestruido()) {
             discosOrdenados.push_back(disco);
         }
     }
@@ -892,7 +1093,7 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
         });
 
     for (const DiscoEnemigo* disco : discosOrdenados) {
-        if (disco == nullptr) {
+        if (disco == nullptr || disco->estaDestruido()) {
             continue;
         }
 
@@ -902,11 +1103,9 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
         painter.setPen(QPen(QColor{255, 150, 120, 170}, 2));
         painter.drawLine(centro, jugador);
         painter.setPen(Qt::NoPen);
-        painter.setBrush(disco->estaDestruido()
-            ? QColor{70, 80, 90}
-            : QColor{255, 80, 90});
-        painter.drawEllipse(centro, radio, radio);
-        if (!disco->estaDestruido()) {
+        if (!dibujarSpriteCentrado(painter, SpriteId::DiscoEnemigo, centro, QSizeF{radio * 4.0, radio * 3.2})) {
+            painter.setBrush(QColor{255, 80, 90});
+            painter.drawEllipse(centro, radio, radio);
             painter.setBrush(QColor{255, 70, 80, 90});
             painter.drawEllipse(centro, radio * 1.65, radio * 1.65);
             painter.setBrush(QColor{255, 230, 170});
@@ -920,19 +1119,30 @@ void MainWindow::dibujarNivelDefensaNucleo(QPainter& painter) {
         painter.setPen(QPen(QColor{80, 255, 235}, 3));
         painter.drawLine(jugador, proyectil);
         painter.setPen(Qt::NoPen);
-        painter.setBrush(QColor{110, 255, 245});
-        painter.drawEllipse(proyectil, 6.0 * escala, 6.0 * escala);
-        painter.setBrush(QColor{110, 255, 245, 95});
-        painter.drawEllipse(proyectil, 13.0 * escala, 13.0 * escala);
+        if (!dibujarSpriteCentrado(painter, SpriteId::ProyectilDefensor, proyectil, QSizeF{32.0 * escala, 24.0 * escala})) {
+            painter.setBrush(QColor{110, 255, 245});
+            painter.drawEllipse(proyectil, 6.0 * escala, 6.0 * escala);
+            painter.setBrush(QColor{110, 255, 245, 95});
+            painter.drawEllipse(proyectil, 13.0 * escala, 13.0 * escala);
+        }
+    }
+
+    if (!dibujarSpriteCentrado(painter, SpriteId::JugadorDefensa, jugador, QSizeF{78.0, 78.0})) {
+        painter.setBrush(QColor{40, 255, 210});
+        painter.drawEllipse(jugador, 28.0, 28.0);
+        painter.setBrush(QColor{230, 255, 245});
+        painter.drawEllipse(jugador, 8.0, 8.0);
     }
 
     if (pulsoImpacto_.count() > 0) {
         const double progreso = progresoPulso(pulsoImpacto_, duracionPulsoImpacto);
         const QPointF centro = convertirDefensaAPantalla(posicionPulsoImpacto_);
-        painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(QColor{120, 255, 235, static_cast<int>(220 * (1.0 - progreso))}, 3));
-        painter.drawEllipse(centro, 10.0 + progreso * 36.0, 10.0 + progreso * 36.0);
-        painter.setPen(Qt::NoPen);
+        if (!dibujarSpriteCentrado(painter, SpriteId::ExplosionCyan, centro, QSizeF{58.0 + progreso * 34.0, 42.0 + progreso * 24.0})) {
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(QColor{120, 255, 235, static_cast<int>(220 * (1.0 - progreso))}, 3));
+            painter.drawEllipse(centro, 10.0 + progreso * 36.0, 10.0 + progreso * 36.0);
+            painter.setPen(Qt::NoPen);
+        }
     }
 
 }
@@ -1022,6 +1232,12 @@ void MainWindow::dibujarOverlayFinal(QPainter& painter) const {
     painter.setBrush(QColor{7, 18, 32, 235});
     painter.setPen(QPen(acento, 2 + pulso * 2));
     painter.drawRoundedRect(tarjeta, 14.0, 14.0);
+
+    dibujarSpriteCentrado(
+        painter,
+        victoria ? SpriteId::Victoria : SpriteId::Derrota,
+        QPointF{tarjeta.x() + 74.0, tarjeta.y() + 72.0},
+        QSizeF{74.0, 74.0});
 
     painter.setPen(acento);
     painter.setFont(QFont{"Arial", 28, QFont::Bold});
