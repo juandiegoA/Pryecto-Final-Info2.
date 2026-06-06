@@ -33,6 +33,8 @@ void NivelRutaTransmision::actualizar(std::chrono::milliseconds intervalo) {
         }
     }
 
+    actualizarAgenteInteligente();
+
     for (Dron* dron : drones) {
         if (dron != nullptr) {
             dron->actualizar(segundos);
@@ -171,6 +173,10 @@ void NivelRutaTransmision::reiniciarDesdeUltimoCheckpoint() {
         return;
     }
 
+    if (indiceObjetivo_ < checkpoints.size()) {
+        agente_.registrarRutaFrecuente(static_cast<int>(indiceObjetivo_));
+    }
+
     Posicion posicionReinicio = jugador_->posicion();
     if (checkpointActual_ != nullptr) {
         posicionReinicio = checkpointActual_->posicion();
@@ -206,6 +212,9 @@ void NivelRutaTransmision::alcanzarObjetivo(Checkpoint& checkpoint) {
     checkpoint.activar();
     checkpointActual_ = &checkpoint;
     jugador_->teletransportarA(checkpoint.posicion());
+    if (indiceObjetivo_ < checkpoints.size()) {
+        agente_.registrarRutaFrecuente(static_cast<int>(indiceObjetivo_));
+    }
 
     if (metaFinal_ != nullptr && &checkpoint == static_cast<Checkpoint*>(metaFinal_)) {
         metaFinal_->marcarFinNivel();
@@ -230,4 +239,38 @@ void NivelRutaTransmision::aplicarRebotes() {
             superficie->aplicarRebote(*disco_);
         }
     }
+}
+
+void NivelRutaTransmision::actualizarAgenteInteligente() {
+    if (jugador_ == nullptr || disco_ == nullptr || checkpoints.empty() || drones.empty()) {
+        return;
+    }
+
+    agente_.percibir(*jugador_, *disco_, checkpoints, objetivoActual());
+
+    if (indiceObjetivo_ + 1U < checkpoints.size()) {
+        return;
+    }
+
+    Dron* dron = dronDefensorFinal();
+    if (dron != nullptr) {
+        agente_.instruirDefensorFinal(*dron, zonaDefensaFinal());
+    }
+}
+
+Dron* NivelRutaTransmision::dronDefensorFinal() noexcept {
+    if (drones.empty()) {
+        return nullptr;
+    }
+
+    Dron* defensor = drones.back();
+    return defensor != nullptr && defensor->estaActivo() ? defensor : nullptr;
+}
+
+Posicion NivelRutaTransmision::zonaDefensaFinal() const noexcept {
+    if (metaFinal_ != nullptr) {
+        return Posicion{metaFinal_->posicion().x() - 3.8F, metaFinal_->posicion().y()};
+    }
+
+    return Posicion{35.2F, -2.8F};
 }

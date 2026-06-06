@@ -1,5 +1,6 @@
 #pragma once
 
+#include "logic/AgenteInteligente.h"
 #include "logic/Nivel.h"
 #include "logic/Temporizador.h"
 
@@ -58,11 +59,15 @@ private:
     void iniciarTiempoObjetivo();
     void alcanzarObjetivo(Checkpoint& checkpoint);
     void aplicarRebotes();
+    void actualizarAgenteInteligente();
+    Dron* dronDefensorFinal() noexcept;
+    Posicion zonaDefensaFinal() const noexcept;
 
     std::vector<Checkpoint*> checkpoints;
     std::vector<Dron*> drones;
     std::vector<Obstaculo*> obstaculos;
     std::vector<TramoRutaTransmision> tramos_;
+    AgenteInteligente agente_{Posicion{0.0F, 0.0F}};
     Jugador* jugador_{nullptr};
     Disco* disco_{nullptr};
     NodoCentralEnergia* metaFinal_{nullptr};

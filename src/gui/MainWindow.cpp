@@ -212,6 +212,23 @@ bool dibujarSpriteCentrado(QPainter& painter, SpriteId sprite, const QPointF& ce
         QRectF{centro.x() - tamano.width() / 2.0, centro.y() - tamano.height() / 2.0, tamano.width(), tamano.height()});
 }
 
+bool dibujarSpriteCentradoRotado(
+    QPainter& painter,
+    SpriteId sprite,
+    const QPointF& centro,
+    const QSizeF& tamano,
+    double grados) {
+    painter.save();
+    painter.translate(centro);
+    painter.rotate(grados);
+    const bool dibujado = dibujarSpriteEnRect(
+        painter,
+        sprite,
+        QRectF{-tamano.height() / 2.0, -tamano.width() / 2.0, tamano.height(), tamano.width()});
+    painter.restore();
+    return dibujado;
+}
+
 double progresoPulso(std::chrono::milliseconds restante, std::chrono::milliseconds duracion) {
     if (duracion.count() <= 0) {
         return 1.0;
@@ -950,7 +967,10 @@ void MainWindow::dibujarNivelRutaTransmision(QPainter& painter) {
         } else if (const auto* rebote = dynamic_cast<const SuperficieRebote*>(obstaculo)) {
             const QPointF centro = convertirAPantalla(rebote->posicion());
             const bool paredVertical = std::abs(rebote->normal().x()) > std::abs(rebote->normal().y());
-            if (!dibujarSpriteCentrado(painter, SpriteId::ReboteMagenta, centro, paredVertical ? QSizeF{34.0, 82.0} : QSizeF{82.0, 34.0})) {
+            const bool spriteReboteDibujado = paredVertical
+                ? dibujarSpriteCentrado(painter, SpriteId::ReboteMagenta, centro, QSizeF{34.0, 82.0})
+                : dibujarSpriteCentradoRotado(painter, SpriteId::ReboteMagenta, centro, QSizeF{82.0, 34.0}, 90.0);
+            if (!spriteReboteDibujado) {
                 painter.setBrush(QColor{255, 60, 210, 70});
                 painter.drawEllipse(centro, paredVertical ? 18.0 : 30.0, paredVertical ? 30.0 : 18.0);
                 painter.setBrush(QColor{255, 80, 210});
